@@ -1,0 +1,110 @@
+import { useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useCreateSuperAdmin, useColleges } from '../lib/queries';
+import { createUserSchema } from '@attend/shared';
+
+export default function CreateSuperAdmin() {
+  const { collegeId } = useParams();
+  const { data: colleges = [] } = useColleges();
+  const college = colleges.find((c: { id: string; name: string }) => c.id === collegeId);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const createSuperAdmin = useCreateSuperAdmin(collegeId ?? '');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const parseResult = createUserSchema.safeParse({
+      email,
+      password,
+      role: 'SUPER_ADMIN' as const,
+      college_id: collegeId ?? null,
+    });
+    if (!parseResult.success) {
+      setError(parseResult.error.errors[0]?.message ?? 'Invalid input');
+      return;
+    }
+    try {
+      await createSuperAdmin.mutateAsync({ email, password });
+      navigate(`/colleges/${collegeId}/users`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create Super Admin');
+    }
+  };
+
+  return (
+    <div style={styles.layout}>
+      <aside style={styles.sidebar}>
+        <h2 style={styles.logo}>Attend</h2>
+        <Link to="/" style={styles.navLink}>Dashboard</Link>
+        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
+      </aside>
+      <main style={styles.main}>
+        <h1>Create Super Admin</h1>
+        <p style={styles.subtitle}>
+          Assign a Super Admin to manage <strong>{college?.name ?? 'this college'}</strong>
+        </p>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.input}
+            required
+          />
+          {error && <p style={styles.error}>{error}</p>}
+          <button type="submit" style={styles.button} disabled={createSuperAdmin.isPending}>
+            {createSuperAdmin.isPending ? 'Creating...' : 'Create Super Admin'}
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  layout: { display: 'flex', minHeight: '100vh' },
+  sidebar: {
+    width: 240,
+    background: '#1a1a1a',
+    padding: 24,
+    borderRight: '1px solid #333',
+  },
+  logo: { margin: '0 0 24px', fontSize: 20 },
+  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
+  main: { flex: 1, padding: 32 },
+  subtitle: { opacity: 0.7, marginBottom: 24 },
+  form: { maxWidth: 400, marginTop: 24 },
+  input: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 8,
+    border: '1px solid #444',
+    background: '#0f0f0f',
+    color: '#e0e0e0',
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  error: { color: '#ff6b6b', marginBottom: 12 },
+  button: {
+    padding: 12,
+    background: '#007AFF',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+};
