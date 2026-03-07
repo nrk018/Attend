@@ -26,15 +26,26 @@ def _get_enrolled_student_ids(supabase, subject_id: str) -> Optional[set]:
     return ids if ids else None
 
 
+def _get_section_student_ids(supabase, section_id: str) -> Optional[set]:
+    """Get student IDs enrolled in a specific section."""
+    r = supabase.table("section_students").select("student_id").eq("section_id", section_id).execute()
+    if not r.data:
+        return None
+    ids = {str(row["student_id"]) for row in r.data}
+    return ids if ids else None
+
+
 def recognize_faces(
     image_bytes: bytes,
     college_id: str,
     subject_id: Optional[str] = None,
+    section_id: Optional[str] = None,
     session_id: Optional[str] = None,
 ) -> tuple[List[dict], int, int]:
     """
     Recognize faces in image. Returns list of matches with student_id, name, confidence, etc.
-    When subject_id is provided and subject has enrolled students, only returns matches for enrolled students.
+    When section_id is provided, only returns matches for students in that section.
+    Falls back to subject_id filtering if no section_id but subject has enrolled students.
     """
     supabase = get_supabase()
     index, id_list = get_or_build_college_index(supabase, college_id)
@@ -42,7 +53,9 @@ def recognize_faces(
         return [], 0, 0
 
     enrolled_ids = None
-    if subject_id:
+    if section_id:
+        enrolled_ids = _get_section_student_ids(supabase, section_id)
+    elif subject_id:
         enrolled_ids = _get_enrolled_student_ids(supabase, subject_id)
 
     img = decode_image(image_bytes)
@@ -119,6 +132,7 @@ def save_attendance(
     student_id: str,
     subject_id: str,
     confidence: float,
+    section_id: Optional[str] = None,
     face_crop_base64: Optional[str] = None,
 ) -> dict:
     """Save attendance record, optionally upload face crop to storage."""
@@ -126,18 +140,22 @@ def save_attendance(
     face_crop_url = None
     if face_crop_base64:
         crop_bytes = base64.b64decode(face_crop_base64)
-        path = f"attendance/{subject_id}/{student_id}/{uuid.uuid4()}.jpg"
+        path = f"attendance/{subject_id}/{section_id or 'general'}/{student_id}/{uuid.uuid4()}.jpg"
         supabase.storage.from_("attendance-crops").upload(path, crop_bytes, file_options={"content-type": "image/jpeg"})
         face_crop_url = supabase.storage.from_("attendance-crops").get_public_url(path)
 
-    result = supabase.table("attendance").insert({
+    record = {
         "student_id": student_id,
         "subject_id": subject_id,
         "attendance_date": date.today().isoformat(),
         "timestamp": datetime.now().isoformat(),
         "confidence": confidence,
         "face_crop_url": face_crop_url,
-    }).execute()
+    }
+    if section_id:
+        record["section_id"] = section_id
+
+    result = supabase.table("attendance").insert(record).execute()
     return result.data[0] if result.data else {}
 
 

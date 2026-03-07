@@ -66,100 +66,83 @@ export default function Subjects() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Subjects</h1>
-        {department && (
-          <p style={styles.subtitle}>{department.name}</p>
-        )}
-        <form onSubmit={handleCreate} style={styles.form}>
-          {error && <p style={{ color: '#ff6b6b', marginBottom: 8 }}>{error}</p>}
-          <input
-            type="text"
-            placeholder="Subject name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={styles.input}
-          />
-          <button type="submit" style={styles.button} disabled={createSubject.isPending}>
-            Add Subject
-          </button>
-        </form>
-        {isLoading ? (
-          <p>Loading...</p>
-        ) : (
-          <ul style={styles.list}>
-            {subjects.map((s: { id: string; name: string }) => (
-              <li key={s.id} style={styles.item}>
-                <span>{s.name}</span>
-                <span style={styles.rowActions}>
-                  <button
-                    type="button"
-                    style={styles.actionBtn}
-                    onClick={() => handleEditOpen(s)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    style={styles.actionBtnDanger}
-                    onClick={() => handleDelete(s)}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {editingSubject && (
-          <div style={styles.modalOverlay} onClick={() => setEditingSubject(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h3>Edit Subject</h3>
-              <form onSubmit={handleEditSave}>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  style={styles.input}
-                  autoFocus
-                />
-                <div style={styles.modalActions}>
-                  <button type="button" style={styles.secondaryBtn} onClick={() => setEditingSubject(null)}>
-                    Cancel
-                  </button>
-                  <button type="submit" style={styles.button} disabled={updateSubject.isPending}>
-                    Save
-                  </button>
-                </div>
-              </form>
-            </div>
+    <>
+      <h1>Subjects</h1>
+      {department && (
+        <p style={styles.subtitle}>{department.name}</p>
+      )}
+      <form onSubmit={handleCreate} style={styles.form}>
+        {error && <p style={{ color: '#ff6b6b', marginBottom: 8 }}>{error}</p>}
+        <input
+          type="text"
+          placeholder="Subject name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={styles.input}
+        />
+        <button type="submit" style={styles.button} disabled={createSubject.isPending}>
+          Add Subject
+        </button>
+      </form>
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
+        <ul style={styles.list}>
+          {subjects.map((s: { id: string; name: string }) => (
+            <li key={s.id} style={styles.item}>
+              <span>{s.name}</span>
+              <span style={styles.rowActions}>
+                <button
+                  type="button"
+                  style={styles.actionBtn}
+                  onClick={() => handleEditOpen(s)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  style={styles.actionBtnDanger}
+                  onClick={() => handleDelete(s)}
+                >
+                  Delete
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {editingSubject && (
+        <div style={styles.modalOverlay} onClick={() => setEditingSubject(null)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Subject</h3>
+            <form onSubmit={handleEditSave}>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                style={styles.input}
+                autoFocus
+              />
+              <div style={styles.modalActions}>
+                <button type="button" style={styles.secondaryBtn} onClick={() => setEditingSubject(null)}>
+                  Cancel
+                </button>
+                <button type="submit" style={styles.button} disabled={updateSubject.isPending}>
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-        <Link to={`/colleges/${collegeId}/departments`} style={styles.backLink}>
-          ← Back to Departments
-        </Link>
-      </main>
-    </div>
+        </div>
+      )}
+      <Link to={`/colleges/${collegeId}/departments`} style={styles.backLink}>
+        ← Back to Departments
+      </Link>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: {
-    width: 240,
-    background: '#1a1a1a',
-    padding: 24,
-    borderRight: '1px solid #333',
-  },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   subtitle: { opacity: 0.7, marginBottom: 24 },
   form: { display: 'flex', gap: 12, marginBottom: 24 },
   input: {

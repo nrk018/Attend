@@ -4,32 +4,47 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  View,
+  Text,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Text, View } from '@/components/Themed';
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import { ENDPOINTS } from '@attend/shared';
+import { GlassButton } from '@/components/ui';
+import { useThemeColors, colors as staticColors, spacing, typography, borderRadius } from '@/theme';
 
 const POSES = ['front', 'left', 'right'] as const;
-const POSE_STEPS: Record<(typeof POSES)[number], { title: string; instruction: string }> = {
+const POSE_STEPS: Record<
+  (typeof POSES)[number],
+  { title: string; instruction: string; icon: keyof typeof Ionicons.glyphMap }
+> = {
   front: {
     title: '1 of 3: Front',
-    instruction: 'Look straight at the camera. Keep your face centered and fully visible.',
+    instruction:
+      'Look straight at the camera. Keep your face centered and fully visible.',
+    icon: 'person',
   },
   left: {
     title: '2 of 3: Left',
-    instruction: 'Turn your head about 30° to your LEFT. Keep your face in frame.',
+    instruction:
+      'Turn your head about 30° to your LEFT. Keep your face in frame.',
+    icon: 'arrow-back',
   },
   right: {
     title: '3 of 3: Right',
-    instruction: 'Turn your head about 30° to your RIGHT. Keep your face in frame.',
+    instruction:
+      'Turn your head about 30° to your RIGHT. Keep your face in frame.',
+    icon: 'arrow-forward',
   },
 };
 
 export default function EnrollCameraScreen() {
   const router = useRouter();
+  const colors = useThemeColors();
   const rawParams = useLocalSearchParams<{
     reg_no: string | string[];
     name: string | string[];
@@ -37,10 +52,16 @@ export default function EnrollCameraScreen() {
     department_id: string | string[];
   }>();
   const params = {
-    reg_no: Array.isArray(rawParams.reg_no) ? rawParams.reg_no[0] : rawParams.reg_no,
+    reg_no: Array.isArray(rawParams.reg_no)
+      ? rawParams.reg_no[0]
+      : rawParams.reg_no,
     name: Array.isArray(rawParams.name) ? rawParams.name[0] : rawParams.name,
-    college_id: Array.isArray(rawParams.college_id) ? rawParams.college_id[0] : rawParams.college_id,
-    department_id: Array.isArray(rawParams.department_id) ? rawParams.department_id[0] : rawParams.department_id,
+    college_id: Array.isArray(rawParams.college_id)
+      ? rawParams.college_id[0]
+      : rawParams.college_id,
+    department_id: Array.isArray(rawParams.department_id)
+      ? rawParams.department_id[0]
+      : rawParams.department_id,
   };
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -83,7 +104,13 @@ export default function EnrollCameraScreen() {
   };
 
   const submitEnrollment = async (photoPaths: { path: string }[]) => {
-    if (photoPaths.length !== 3 || !params.reg_no || !params.name || !params.college_id || !params.department_id) {
+    if (
+      photoPaths.length !== 3 ||
+      !params.reg_no ||
+      !params.name ||
+      !params.college_id ||
+      !params.department_id
+    ) {
       Alert.alert('Error', 'Missing data. Please go back and try again.');
       return;
     }
@@ -95,13 +122,26 @@ export default function EnrollCameraScreen() {
       formData.append('college_id', params.college_id);
       formData.append('department_id', params.department_id);
       const toFile = (uri: string, name: string) => ({
-        uri: uri.startsWith('file://') ? uri : uri.startsWith('/') ? `file://${uri}` : uri,
+        uri: uri.startsWith('file://')
+          ? uri
+          : uri.startsWith('/')
+          ? `file://${uri}`
+          : uri,
         type: 'image/jpeg',
         name,
       });
-      formData.append('front', toFile(photoPaths[0].path, 'front.jpg') as unknown as Blob);
-      formData.append('left', toFile(photoPaths[1].path, 'left.jpg') as unknown as Blob);
-      formData.append('right', toFile(photoPaths[2].path, 'right.jpg') as unknown as Blob);
+      formData.append(
+        'front',
+        toFile(photoPaths[0].path, 'front.jpg') as unknown as Blob
+      );
+      formData.append(
+        'left',
+        toFile(photoPaths[1].path, 'left.jpg') as unknown as Blob
+      );
+      formData.append(
+        'right',
+        toFile(photoPaths[2].path, 'right.jpg') as unknown as Blob
+      );
 
       const token = require('@/store/auth').useAuthStore.getState().token;
       await api.post(ENDPOINTS.ENROLL_STUDENT, formData, {
@@ -123,22 +163,39 @@ export default function EnrollCameraScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: unknown) {
-      const ax = err as { response?: { data?: { detail?: string }; status?: number }; message?: string };
+      const ax = err as {
+        response?: { data?: { detail?: string }; status?: number };
+        message?: string;
+      };
       let msg = 'Please try again.';
       if (ax?.response?.data?.detail) {
         msg = ax.response.data.detail;
       } else if (ax?.response?.status === 400) {
-        msg = ax?.response?.data?.detail ?? 'Invalid images. Ensure face is clearly visible in all 3 photos.';
-      } else if (ax?.message?.toLowerCase().includes('network') || !ax?.response) {
-        msg = 'Connection failed. Check your network and that the backend is running.';
+        msg =
+          ax?.response?.data?.detail ??
+          'Invalid images. Ensure face is clearly visible in all 3 photos.';
+      } else if (
+        ax?.message?.toLowerCase().includes('network') ||
+        !ax?.response
+      ) {
+        msg =
+          'Connection failed. Check your network and that the backend is running.';
       }
-      const isFaceError = msg.toLowerCase().includes('face') || msg.toLowerCase().includes('detected');
+      const isFaceError =
+        msg.toLowerCase().includes('face') ||
+        msg.toLowerCase().includes('detected');
       Alert.alert(
         'Enrollment Failed',
         msg,
         isFaceError
           ? [
-              { text: 'Retake Photos', onPress: () => { setPhotos([]); setCurrentPose(0); } },
+              {
+                text: 'Retake Photos',
+                onPress: () => {
+                  setPhotos([]);
+                  setCurrentPose(0);
+                },
+              },
               { text: 'Cancel', onPress: () => router.back() },
             ]
           : [
@@ -152,60 +209,95 @@ export default function EnrollCameraScreen() {
   };
 
   if (!permission) {
-    return <View style={styles.container} />;
+    return <View style={[styles.container, { backgroundColor: colors.background }]} />;
   }
 
   if (!hasPermission) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>Camera permission is required for enrollment.</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Grant Permission</Text>
-        </TouchableOpacity>
+      <View style={[styles.permissionContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionText}>
+          Camera permission is required for enrollment.
+        </Text>
+        <GlassButton variant="primary" size="lg" onPress={requestPermission}>
+          Grant Permission
+        </GlassButton>
       </View>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.message}>Enrolling student...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textPrimary }]}>Enrolling student...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView
-        ref={camera}
-        style={StyleSheet.absoluteFill}
-        facing={facing}
-      />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <CameraView ref={camera} style={StyleSheet.absoluteFill} facing={facing} />
+
       <TouchableOpacity
         style={styles.flipBtn}
         onPress={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
       >
-        <Text style={styles.flipBtnText}>Flip camera</Text>
+        <BlurView intensity={40} tint="dark" style={styles.flipBtnBlur}>
+          <Ionicons name="camera-reverse" size={20} color={colors.textPrimary} />
+          <Text style={styles.flipBtnText}>Flip</Text>
+        </BlurView>
       </TouchableOpacity>
+
       <View style={styles.overlay}>
-        <View style={styles.instructionCard}>
-          <Text style={styles.stepTitle}>{POSE_STEPS[POSES[currentPose]].title}</Text>
-          <Text style={styles.instruction}>{POSE_STEPS[POSES[currentPose]].instruction}</Text>
+        <BlurView intensity={60} tint="dark" style={styles.instructionCard}>
+          <View style={styles.poseIconContainer}>
+            <Ionicons
+              name={POSE_STEPS[POSES[currentPose]].icon}
+              size={28}
+              color={colors.primary}
+            />
+          </View>
+          <Text style={styles.stepTitle}>
+            {POSE_STEPS[POSES[currentPose]].title}
+          </Text>
+          <Text style={styles.instruction}>
+            {POSE_STEPS[POSES[currentPose]].instruction}
+          </Text>
           <Text style={styles.tip}>Good lighting • Face clearly visible</Text>
+        </BlurView>
+
+        <View style={styles.progressContainer}>
+          {POSES.map((_, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.progressDot,
+                idx <= currentPose && styles.progressDotActive,
+                idx < photos.length && styles.progressDotComplete,
+              ]}
+            />
+          ))}
         </View>
-        <Text style={styles.progress}>
-          Photo {photos.length + 1} of 3
-        </Text>
+
         <TouchableOpacity
           style={[styles.captureBtn, capturing && styles.captureBtnDisabled]}
           onPress={handleCapture}
           disabled={capturing}
+          activeOpacity={0.8}
         >
-          <Text style={styles.captureBtnText}>{capturing ? '...' : 'Capture'}</Text>
+          <View style={styles.captureBtnInner}>
+            {capturing ? (
+              <ActivityIndicator color={colors.textOnPrimary} />
+            ) : (
+              <Ionicons name="camera" size={32} color={colors.textOnPrimary} />
+            )}
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>Cancel</Text>
+
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
+          <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -213,75 +305,146 @@ export default function EnrollCameraScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  permissionTitle: {
+    ...typography.h2,
+    color: staticColors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  permissionText: {
+    ...typography.body,
+    color: staticColors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    marginTop: spacing.lg,
+  },
   flipBtn: {
     position: 'absolute',
-    top: 48,
-    right: 16,
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 8,
+    top: 60,
+    right: spacing.lg,
     zIndex: 10,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
   },
-  flipBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  flipBtnBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  flipBtnText: {
+    ...typography.buttonSmall,
+    color: staticColors.textPrimary,
+  },
   overlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
-    paddingBottom: 48,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
   },
   instructionCard: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  poseIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 200, 83, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   stepTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    ...typography.h3,
+    color: staticColors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   instruction: {
-    fontSize: 16,
-    color: '#fff',
+    ...typography.body,
+    color: staticColors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   tip: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    ...typography.caption,
+    color: staticColors.textMuted,
     textAlign: 'center',
   },
-  progress: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginBottom: 24,
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  progressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: staticColors.surfaceGlass,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+  },
+  progressDotActive: {
+    borderColor: staticColors.primary,
+  },
+  progressDotComplete: {
+    backgroundColor: staticColors.primary,
+    borderColor: staticColors.primary,
   },
   captureBtn: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  captureBtnDisabled: { opacity: 0.6 },
-  captureBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  backBtn: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  backBtnText: { color: 'rgba(255,255,255,0.9)', fontSize: 16 },
-  message: { fontSize: 16, textAlign: 'center', marginBottom: 16 },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
     alignSelf: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: staticColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    borderWidth: 4,
+    borderColor: staticColors.glow,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  captureBtnDisabled: {
+    opacity: 0.6,
+  },
+  captureBtnInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: staticColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    ...typography.body,
+    color: staticColors.textSecondary,
+  },
 });

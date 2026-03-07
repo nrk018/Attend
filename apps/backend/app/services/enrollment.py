@@ -3,7 +3,7 @@ Student enrollment: 3 face images -> detect, extract embedding, store.
 Storage: primary-faces bucket, path {college_id}/{student_id}/primary.jpg, left.jpg, right.jpg.
 """
 import uuid
-from typing import List
+from typing import List, Optional
 
 from app.config import get_settings
 from app.db.supabase import get_supabase
@@ -19,8 +19,8 @@ def enroll_student(
     front_image_bytes: bytes,
     left_image_bytes: bytes,
     right_image_bytes: bytes,
-    created_by: str | None = None,
-    subject_ids: List[str] | None = None,
+    created_by: Optional[str] = None,
+    subject_ids: Optional[List[str]] = None,
 ) -> dict:
     """
     Enroll student with 3 images. Uses front for primary embedding and storage.
@@ -109,8 +109,8 @@ def enroll_student(
 
 def add_face_embeddings(
     student_id: str,
-    left_image_bytes: bytes | None = None,
-    right_image_bytes: bytes | None = None,
+    left_image_bytes: Optional[bytes] = None,
+    right_image_bytes: Optional[bytes] = None,
 ) -> dict:
     """Add left and/or right face images + embeddings. Uses primary-faces bucket, same path structure as enrollment."""
     if not left_image_bytes and not right_image_bytes:

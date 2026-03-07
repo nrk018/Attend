@@ -1,34 +1,86 @@
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Image } from 'react-native';
 import { router } from 'expo-router';
-import { Text, View } from '@/components/Themed';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer } from '@/components/layout';
+import { GlassCard, GlassButton, IconBadge } from '@/components/ui';
+import { colors, spacing, typography } from '@/theme';
+
+const logoDark = require('@/assets/images/logo-dark.png');
 
 export default function SignUpScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>
-        Attend accounts are created by your administrator. Contact your department admin or college admin to get an account.
-      </Text>
-      <Text style={styles.note}>
-        Teachers and admins are added by their department or college administrator.
-      </Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-        <Text style={styles.buttonText}>Back to Sign In</Text>
-      </TouchableOpacity>
-    </View>
+    <ScreenContainer safeBottom>
+      <View style={styles.container}>
+        <Image source={logoDark} style={styles.logo} resizeMode="contain" />
+
+        <GlassCard style={styles.card}>
+          <IconBadge variant="primary" size="lg" style={styles.iconBadge}>
+            <Ionicons name="information-circle" size={28} color={colors.primary} />
+          </IconBadge>
+
+          <Text style={styles.title}>Create Account</Text>
+
+          <Text style={styles.subtitle}>
+            Attend accounts are created by your administrator. Contact your
+            department admin or college admin to get an account.
+          </Text>
+
+          <Text style={styles.note}>
+            Teachers and admins are added by their department or college
+            administrator.
+          </Text>
+        </GlassCard>
+
+        <GlassButton
+          variant="primary"
+          size="lg"
+          onPress={() => router.back()}
+          style={styles.button}
+        >
+          Back to Sign In
+        </GlassButton>
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 16 },
-  subtitle: { fontSize: 16, textAlign: 'center', marginBottom: 16, opacity: 0.9 },
-  note: { fontSize: 14, textAlign: 'center', marginBottom: 32, opacity: 0.7 },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  logo: {
+    width: 180,
+    height: 60,
+    marginBottom: spacing.xxl,
+  },
+  card: {
+    width: '100%',
+    marginBottom: spacing.xl,
+  },
+  iconBadge: {
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  title: {
+    ...typography.h2,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  note: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  button: {
+    width: '100%',
+  },
 });

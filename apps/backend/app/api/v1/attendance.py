@@ -16,7 +16,7 @@ from datetime import datetime
 router = APIRouter()
 
 
-def _extract_storage_path(face_crop_url: str | None) -> str | None:
+def _extract_storage_path(face_crop_url: Optional[str]) -> Optional[str]:
     """Extract storage path from face_crop_url for bucket deletion."""
     if not face_crop_url:
         return None
@@ -28,6 +28,7 @@ class AttendanceRecord(BaseModel):
     student_id: str
     subject_id: str
     confidence: float
+    section_id: Optional[str] = None
     face_crop_base64: Optional[str] = None
 
 
@@ -46,6 +47,7 @@ def confirm_attendance(
             student_id=r.student_id,
             subject_id=r.subject_id,
             confidence=r.confidence,
+            section_id=r.section_id,
             face_crop_base64=r.face_crop_base64,
         )
         results.append(rec)
@@ -55,9 +57,10 @@ def confirm_attendance(
 @router.get("/list")
 def list_attendance(
     subject_id: str,
+    section_id: Optional[str] = None,
     user: dict = Depends(get_current_user),
 ):
-    """List attendance records for a subject with student info and face_crop_url."""
+    """List attendance records for a subject (optionally filtered by section) with student info and face_crop_url."""
     role = user.get("role")
     if role not in ("TEACHER", "DEPARTMENT_ADMIN", "PLATFORM_ADMIN", "SUPER_ADMIN"):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
@@ -72,10 +75,16 @@ def list_attendance(
         teacher_subject_ids = {r["subject_id"] for r in (st.data or [])}
         if subject_id not in teacher_subject_ids:
             raise HTTPException(status_code=403, detail="Cannot access this subject")
-    result = supabase.table("attendance").select(
-        "id, student_id, subject_id, timestamp, attendance_date, confidence, face_crop_url, "
-        "students(reg_no, name), subjects(name)"
-    ).eq("subject_id", subject_id).order("timestamp", desc=False).execute()
+    
+    q = supabase.table("attendance").select(
+        "id, student_id, subject_id, section_id, timestamp, attendance_date, confidence, face_crop_url, "
+        "students(reg_no, name), subjects(name), sections(name)"
+    ).eq("subject_id", subject_id)
+    
+    if section_id:
+        q = q.eq("section_id", section_id)
+    
+    result = q.order("timestamp", desc=False).execute()
     return result.data or []
 
 
@@ -241,7 +250,7 @@ def attendance_report(
     )
 
 
-def _fetch_attendance_for_report(supabase, subject_id: str, start_date: str | None, end_date: str | None):
+def _fetch_attendance_for_report(supabase, subject_id: str, start_date: Optional[str], end_date: Optional[str]):
     q = supabase.table("attendance").select(
         "id, student_id, subject_id, timestamp, attendance_date, confidence, face_crop_url, "
         "students(reg_no, name), subjects(name)"

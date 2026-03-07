@@ -12,6 +12,7 @@ router = APIRouter()
 async def recognize(
     subject_id: str = Form(...),
     image: UploadFile = File(...),
+    section_id: Optional[str] = Form(None),
     session_id: Optional[str] = Form(None),
     user: dict = Depends(require_teacher),
 ):
@@ -25,6 +26,7 @@ async def recognize(
             image_bytes=image_bytes,
             college_id=college_id,
             subject_id=subject_id,
+            section_id=section_id,
             session_id=session_id,
         )
         return {"results": results, "image_width": img_w, "image_height": img_h}
@@ -46,6 +48,7 @@ async def recognize_stream(
     session_id: str = Form(...),
     subject_id: str = Form(...),
     image: UploadFile = File(...),
+    section_id: Optional[str] = Form(None),
     user: dict = Depends(require_teacher),
 ):
     college_id = user.get("college_id")
@@ -57,6 +60,7 @@ async def recognize_stream(
         image_bytes=image_bytes,
         college_id=college_id,
         subject_id=subject_id,
+        section_id=section_id,
         session_id=session_id,
     )
     return {"results": results, "image_width": img_w, "image_height": img_h}

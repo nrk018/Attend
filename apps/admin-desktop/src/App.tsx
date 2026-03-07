@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/auth';
+import { Layout } from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Colleges from './pages/Colleges';
@@ -24,85 +25,23 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <Layout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/colleges"
-          element={
-            <ProtectedRoute>
-              <Colleges />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/new"
-          element={
-            <ProtectedRoute>
-              <CreateCollege />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/edit"
-          element={
-            <ProtectedRoute>
-              <EditCollege />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/super-admin"
-          element={
-            <ProtectedRoute>
-              <CreateSuperAdmin />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/departments"
-          element={
-            <ProtectedRoute>
-              <Departments />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/users"
-          element={
-            <ProtectedRoute>
-              <Users />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/users/new"
-          element={
-            <ProtectedRoute>
-              <CreateUser />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/students"
-          element={
-            <ProtectedRoute>
-              <Students />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/colleges/:collegeId/departments/:departmentId/subjects"
-          element={
-            <ProtectedRoute>
-              <Subjects />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="/colleges" element={<Colleges />} />
+          <Route path="/colleges/new" element={<CreateCollege />} />
+          <Route path="/colleges/:collegeId/edit" element={<EditCollege />} />
+          <Route path="/colleges/:collegeId/super-admin" element={<CreateSuperAdmin />} />
+          <Route path="/colleges/:collegeId/departments" element={<Departments />} />
+          <Route path="/colleges/:collegeId/users" element={<Users />} />
+          <Route path="/colleges/:collegeId/users/new" element={<CreateUser />} />
+          <Route path="/colleges/:collegeId/students" element={<Students />} />
+          <Route path="/colleges/:collegeId/departments/:departmentId/subjects" element={<Subjects />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

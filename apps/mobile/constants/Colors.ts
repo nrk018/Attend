@@ -1,19 +1,21 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+import { darkColors, lightColors } from '../theme';
+
+const tintColorLight = lightColors.primary;
+const tintColorDark = darkColors.primary;
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
+    text: lightColors.textPrimary,
+    background: lightColors.background,
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    tabIconDefault: lightColors.textMuted,
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
+    text: darkColors.textPrimary,
+    background: darkColors.background,
     tint: tintColorDark,
-    tabIconDefault: '#ccc',
+    tabIconDefault: darkColors.textMuted,
     tabIconSelected: tintColorDark,
   },
 };

@@ -3,24 +3,13 @@ import { useAuthStore } from '../store/auth';
 import { useStats } from '../lib/queries';
 
 export default function Dashboard() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const showStats = user?.role === 'PLATFORM_ADMIN';
   const { data: stats, isLoading: statsLoading } = useStats(null, showStats);
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <nav style={styles.nav}>
-          <Link to="/" style={styles.navLink}>Dashboard</Link>
-          {(user?.role === 'PLATFORM_ADMIN' || user?.role === 'SUPER_ADMIN') && (
-            <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-          )}
-        </nav>
-        <button onClick={logout} style={styles.logout}>Sign Out</button>
-      </aside>
-      <main style={styles.main}>
-        <h1>Dashboard</h1>
+    <>
+      <h1>Dashboard</h1>
         <p>Welcome, {user?.email}</p>
         <p style={styles.role}>Role: {user?.role}</p>
         {user?.role === 'PLATFORM_ADMIN' && (
@@ -84,34 +73,11 @@ export default function Dashboard() {
             Teachers use the mobile app for enrollment, attendance, and reports.
           </p>
         )}
-      </main>
-    </div>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: {
-    width: 240,
-    background: '#1a1a1a',
-    padding: 24,
-    borderRight: '1px solid #333',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  logo: { margin: '0 0 32px', fontSize: 20, fontWeight: 700 },
-  nav: { display: 'flex', flexDirection: 'column', gap: 4 },
-  navLink: { color: '#e0e0e0', padding: 8, textDecoration: 'none', borderRadius: 6 },
-  logout: {
-    marginTop: 'auto',
-    padding: 8,
-    background: 'transparent',
-    border: '1px solid #444',
-    color: '#e0e0e0',
-    borderRadius: 6,
-    cursor: 'pointer',
-  },
-  main: { flex: 1, padding: 32 },
   role: { opacity: 0.7, marginBottom: 24 },
   actions: { display: 'flex', gap: 12, flexWrap: 'wrap' },
   primaryButton: {

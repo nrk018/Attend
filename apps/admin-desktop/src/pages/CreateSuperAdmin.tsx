@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useCreateSuperAdmin, useColleges } from '../lib/queries';
 import { createUserSchema } from '@attend/shared';
 
@@ -35,55 +35,38 @@ export default function CreateSuperAdmin() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Create Super Admin</h1>
-        <p style={styles.subtitle}>
-          Assign a Super Admin to manage <strong>{college?.name ?? 'this college'}</strong>
-        </p>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-          />
-          {error && <p style={styles.error}>{error}</p>}
-          <button type="submit" style={styles.button} disabled={createSuperAdmin.isPending}>
-            {createSuperAdmin.isPending ? 'Creating...' : 'Create Super Admin'}
-          </button>
-        </form>
-      </main>
-    </div>
+    <>
+      <h1>Create Super Admin</h1>
+      <p style={styles.subtitle}>
+        Assign a Super Admin to manage <strong>{college?.name ?? 'this college'}</strong>
+      </p>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={styles.input}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+          required
+        />
+        {error && <p style={styles.error}>{error}</p>}
+        <button type="submit" style={styles.button} disabled={createSuperAdmin.isPending}>
+          {createSuperAdmin.isPending ? 'Creating...' : 'Create Super Admin'}
+        </button>
+      </form>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: {
-    width: 240,
-    background: '#1a1a1a',
-    padding: 24,
-    borderRight: '1px solid #333',
-  },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   subtitle: { opacity: 0.7, marginBottom: 24 },
   form: { maxWidth: 400, marginTop: 24 },
   input: {

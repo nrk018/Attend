@@ -71,3 +71,137 @@ export function useStudents(collegeId: string | null, departmentId: string | nul
     enabled,
   });
 }
+
+// Section queries
+export function useSections(subjectId: string | null) {
+  return useQuery({
+    queryKey: ['sections', subjectId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.subjectSections(subjectId!));
+      return data ?? [];
+    },
+    enabled: !!subjectId,
+  });
+}
+
+export function useMySections() {
+  return useQuery({
+    queryKey: ['my-sections'],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.MY_SECTIONS);
+      return data ?? [];
+    },
+  });
+}
+
+export function useSectionStudents(sectionId: string | null) {
+  return useQuery({
+    queryKey: ['section-students', sectionId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.sectionStudents(sectionId!));
+      return data ?? [];
+    },
+    enabled: !!sectionId,
+  });
+}
+
+export function useSectionTeachers(sectionId: string | null) {
+  return useQuery({
+    queryKey: ['section-teachers', sectionId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.sectionTeachers(sectionId!));
+      return data ?? [];
+    },
+    enabled: !!sectionId,
+  });
+}
+
+export function useTeachers(departmentId: string | null) {
+  return useQuery({
+    queryKey: ['teachers', departmentId],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/users?department_id=${departmentId}&role=TEACHER`);
+      return data ?? [];
+    },
+    enabled: !!departmentId,
+  });
+}
+
+// Section mutations
+export function useCreateSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ subjectId, name }: { subjectId: string; name: string }) => {
+      const { data } = await api.post(ENDPOINTS.subjectSections(subjectId), { name });
+      return data;
+    },
+    onSuccess: (_, { subjectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['sections', subjectId] });
+    },
+  });
+}
+
+export function useDeleteSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sectionId: string) => {
+      await api.delete(ENDPOINTS.sectionById(sectionId));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sections'] });
+      queryClient.invalidateQueries({ queryKey: ['my-sections'] });
+    },
+  });
+}
+
+export function useAssignTeachersToSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, teacherIds }: { sectionId: string; teacherIds: string[] }) => {
+      const { data } = await api.post(ENDPOINTS.sectionTeachers(sectionId), { teacher_ids: teacherIds });
+      return data;
+    },
+    onSuccess: (_, { sectionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['section-teachers', sectionId] });
+      queryClient.invalidateQueries({ queryKey: ['my-sections'] });
+    },
+  });
+}
+
+export function useRemoveTeacherFromSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, teacherId }: { sectionId: string; teacherId: string }) => {
+      await api.delete(ENDPOINTS.sectionTeacher(sectionId, teacherId));
+    },
+    onSuccess: (_, { sectionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['section-teachers', sectionId] });
+      queryClient.invalidateQueries({ queryKey: ['my-sections'] });
+    },
+  });
+}
+
+export function useAssignStudentsToSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, studentIds }: { sectionId: string; studentIds: string[] }) => {
+      const { data } = await api.post(ENDPOINTS.sectionStudents(sectionId), { student_ids: studentIds });
+      return data;
+    },
+    onSuccess: (_, { sectionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['section-students', sectionId] });
+    },
+  });
+}
+
+export function useRemoveStudentFromSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, studentId }: { sectionId: string; studentId: string }) => {
+      await api.delete(ENDPOINTS.sectionStudent(sectionId, studentId));
+    },
+    onSuccess: (_, { sectionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['section-students', sectionId] });
+    },
+  });
+}

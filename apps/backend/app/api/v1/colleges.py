@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
@@ -14,18 +15,18 @@ MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5MB
 
 class CreateCollegeRequest(BaseModel):
     name: str
-    logo_url: str | None = None
+    logo_url: Optional[str] = None
 
 
 class UpdateCollegeRequest(BaseModel):
-    name: str | None = None
-    logo_url: str | None = None
+    name: Optional[str] = None
+    logo_url: Optional[str] = None
 
 
 class CollegeResponse(BaseModel):
     id: str
     name: str
-    logo_url: str | None
+    logo_url: Optional[str]
     created_at: str
 
 
@@ -78,7 +79,7 @@ def create_college(
     )
 
 
-@router.get("", response_model=list[CollegeResponse])
+@router.get("", response_model=List[CollegeResponse])
 def list_colleges(user: dict = Depends(require_super_admin)):
     supabase = get_supabase()
     q = supabase.table("colleges").select("*").order("created_at", desc=True)

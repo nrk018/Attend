@@ -2,16 +2,35 @@
  * Types are re-exported from schemas for Zod-inferred types.
  * Legacy interfaces kept for backward compatibility - prefer schemas.
  */
-export type { User, College, Department, Subject, Student, LoginResponse } from './schemas';
+export type { User, College, Department, Subject, Section, Student, LoginResponse, AttendanceRecord } from './schemas';
 export type { Role } from './roles';
 
 export interface Attendance {
   id: string;
   student_id: string;
   subject_id: string;
+  section_id: string | null;
   timestamp: string;
   confidence: number;
   face_crop_url: string | null;
+}
+
+export interface SectionWithSubject {
+  id: string;
+  subject_id: string;
+  name: string;
+  subject_name?: string;
+  created_at: string;
+}
+
+export interface SubjectWithSections {
+  subject_id: string;
+  subject_name: string;
+  sections: Array<{
+    id: string;
+    name: string;
+    created_at?: string;
+  }>;
 }
 
 export interface RecognitionResult {

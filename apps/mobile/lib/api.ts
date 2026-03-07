@@ -5,7 +5,7 @@ import { ENDPOINTS } from '@attend/shared';
 import { useAuthStore } from '@/store/auth';
 
 /** Your Mac's IP - update when it changes (ipconfig getifaddr en0). Used for device + emulator. */
-const DEV_API_URL = 'http://10.73.3.164:8000';
+const DEV_API_URL = 'http://10.94.29.247:8000';
 
 function getApiBase(): string {
   if (Platform.OS === 'web') {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, ENDPOINTS } from '../lib/api';
 import { useAuthStore } from '../store/auth';
 import { loginSchema, loginResponseSchema } from '@attend/shared';
+import logoDark from '../assets/logo-dark.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -38,7 +39,7 @@ export default function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Attend Admin</h1>
+        <img src={logoDark} alt="Attend" style={styles.logo} />
         <p style={styles.subtitle}>College Administration</p>
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
@@ -83,7 +84,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     border: '1px solid #333',
   },
-  title: { margin: 0, fontSize: 28, fontWeight: 700 },
+  logo: { width: 160, height: 50, objectFit: 'contain' as const, marginBottom: 8 },
   subtitle: { margin: '4px 0 24px', opacity: 0.7 },
   form: { display: 'flex', flexDirection: 'column', gap: 12 },
   input: {

@@ -1,14 +1,25 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import {
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ScrollView,
+  View,
+  Text,
+} from 'react-native';
 import { router } from 'expo-router';
-import { Text, View } from '@/components/Themed';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/lib/api';
 import { ENDPOINTS } from '@attend/shared';
 import { userSchema } from '@attend/shared';
 import { useAuthStore } from '@/store/auth';
+import { GlassCard, GlassButton, GlassInput } from '@/components/ui';
+import { useThemeColors, colors as staticColors, spacing, typography } from '@/theme';
 
 export default function ProfileEditScreen() {
   const { user, token, setAuth } = useAuthStore();
+  const colors = useThemeColors();
   const [name, setName] = useState(user?.name ?? '');
   const [contactNumber, setContactNumber] = useState(user?.contact_number ?? '');
   const [loading, setLoading] = useState(false);
@@ -32,7 +43,10 @@ export default function ProfileEditScreen() {
       }
       router.back();
     } catch (e: any) {
-      Alert.alert('Error', e.response?.data?.detail || 'Failed to update profile');
+      Alert.alert(
+        'Error',
+        e.response?.data?.detail || 'Failed to update profile'
+      );
     } finally {
       setLoading(false);
     }
@@ -41,57 +55,92 @@ export default function ProfileEditScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>Edit Profile</Text>
-        <Text style={styles.subtitle}>Update your name and contact number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Contact Number"
-          value={contactNumber}
-          onChangeText={setContactNumber}
-          keyboardType="phone-pad"
-        />
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Edit Profile</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>Update your name and contact number</Text>
+
+        <GlassCard style={styles.formCard}>
+          <GlassInput
+            label="Name"
+            placeholder="Your full name"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            leftIcon={
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={colors.textMuted}
+              />
+            }
+          />
+          <GlassInput
+            label="Contact Number"
+            placeholder="Your phone number"
+            value={contactNumber}
+            onChangeText={setContactNumber}
+            keyboardType="phone-pad"
+            leftIcon={
+              <Ionicons
+                name="call-outline"
+                size={20}
+                color={colors.textMuted}
+              />
+            }
+          />
+        </GlassCard>
+
+        <GlassButton
+          variant="primary"
+          size="lg"
           onPress={handleSave}
+          loading={loading}
           disabled={loading}
+          style={styles.saveButton}
         >
-          <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save'}</Text>
-        </TouchableOpacity>
-      </View>
+          Save Changes
+        </GlassButton>
+
+        <GlassButton variant="ghost" size="md" onPress={() => router.back()}>
+          Cancel
+        </GlassButton>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center' },
-  inner: { padding: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  subtitle: { fontSize: 16, marginBottom: 24, opacity: 0.7 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
+  container: {
+    flex: 1,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
+  scrollView: {
+    flex: 1,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  content: {
+    padding: spacing.lg,
+    justifyContent: 'center',
+    flexGrow: 1,
+  },
+  title: {
+    ...typography.h1,
+    color: staticColors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    ...typography.body,
+    color: staticColors.textMuted,
+    marginBottom: spacing.xl,
+  },
+  formCard: {
+    marginBottom: spacing.xl,
+  },
+  saveButton: {
+    marginBottom: spacing.md,
+  },
 });

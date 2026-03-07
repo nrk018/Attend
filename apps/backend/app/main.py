@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, colleges, users, departments, subjects, students, recognize, attendance, admin
+from app.api.v1 import auth, colleges, users, departments, subjects, students, recognize, attendance, admin, sections
 from app.config import get_settings
 
 settings = get_settings()
@@ -31,6 +31,7 @@ app.include_router(students.router, prefix="/api/v1/students", tags=["Students"]
 app.include_router(recognize.router, prefix="/api/v1/recognize", tags=["Recognize"])
 app.include_router(attendance.router, prefix="/api/v1/attendance", tags=["Attendance"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+app.include_router(sections.router, prefix="/api/v1", tags=["Sections"])
 
 
 @app.get("/health")

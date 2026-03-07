@@ -71,6 +71,26 @@ export const subjectSchema = z.object({
   created_at: z.string(),
 });
 
+// Section
+export const createSectionSchema = z.object({
+  name: z.string().min(1, 'Section name is required').max(50, 'Section name too long'),
+});
+
+export const sectionSchema = z.object({
+  id: z.string(),
+  subject_id: z.string(),
+  name: z.string(),
+  created_at: z.string(),
+});
+
+export const assignTeachersSchema = z.object({
+  teacher_ids: z.array(z.string().uuid()),
+});
+
+export const assignStudentsSchema = z.object({
+  student_ids: z.array(z.string().uuid()),
+});
+
 // Student
 export const createStudentSchema = z.object({
   reg_no: z.string().min(1, 'Registration number is required'),
@@ -104,6 +124,7 @@ export const createUserSchema = z.object({
 export const attendanceRecordSchema = z.object({
   student_id: z.string(),
   subject_id: z.string(),
+  section_id: z.string().optional().nullable(),
   confidence: z.number(),
   face_crop_base64: z.string().optional().nullable(),
 });
@@ -119,4 +140,6 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>;
 export type College = z.infer<typeof collegeSchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type Subject = z.infer<typeof subjectSchema>;
+export type Section = z.infer<typeof sectionSchema>;
 export type Student = z.infer<typeof studentSchema>;
+export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;

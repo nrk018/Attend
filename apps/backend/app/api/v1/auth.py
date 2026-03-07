@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
@@ -31,8 +32,8 @@ class ResendVerificationRequest(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    name: str | None = None
-    contact_number: str | None = None
+    name: Optional[str] = None
+    contact_number: Optional[str] = None
 
 
 class LoginResponse(BaseModel):

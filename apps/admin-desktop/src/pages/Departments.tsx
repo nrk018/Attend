@@ -63,56 +63,49 @@ export default function Departments() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Departments</h1>
-        <form onSubmit={handleCreate} style={styles.form}>
-          {error && <p style={{ color: '#ff6b6b', marginBottom: 8 }}>{error}</p>}
-          <input
-            type="text"
-            placeholder="Department name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={styles.input}
-          />
-          <button type="submit" style={styles.button} disabled={createDept.isPending}>Add Department</button>
-        </form>
-        <ul style={styles.list}>
-          {departments.map((d: { id: string; name: string }) => (
-            <li key={d.id} style={styles.item}>
-              {editingId === d.id ? (
-                <>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    style={styles.editInput}
-                    autoFocus
-                  />
-                  <span style={styles.editActions}>
-                    <button type="button" style={styles.smallBtn} onClick={saveEdit} disabled={updateDept.isPending}>Save</button>
-                    <button type="button" style={styles.smallCancelBtn} onClick={cancelEdit}>Cancel</button>
-                  </span>
-                </>
-              ) : (
-                <>
-                  {d.name}
-                  <span style={styles.actions}>
-                    <Link to={`/colleges/${collegeId}/departments/${d.id}/subjects`} style={styles.subjectLink}>Subjects</Link>
-                    <button type="button" style={styles.editBtn} onClick={() => startEdit(d)}>Edit</button>
-                    <button type="button" style={styles.deleteBtn} onClick={() => setDeleteConfirm({ id: d.id, name: d.name })}>Delete</button>
-                  </span>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </main>
+    <>
+      <h1>Departments</h1>
+      <form onSubmit={handleCreate} style={styles.form}>
+        {error && <p style={{ color: '#ff6b6b', marginBottom: 8 }}>{error}</p>}
+        <input
+          type="text"
+          placeholder="Department name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={styles.input}
+        />
+        <button type="submit" style={styles.button} disabled={createDept.isPending}>Add Department</button>
+      </form>
+      <ul style={styles.list}>
+        {departments.map((d: { id: string; name: string }) => (
+          <li key={d.id} style={styles.item}>
+            {editingId === d.id ? (
+              <>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={styles.editInput}
+                  autoFocus
+                />
+                <span style={styles.editActions}>
+                  <button type="button" style={styles.smallBtn} onClick={saveEdit} disabled={updateDept.isPending}>Save</button>
+                  <button type="button" style={styles.smallCancelBtn} onClick={cancelEdit}>Cancel</button>
+                </span>
+              </>
+            ) : (
+              <>
+                {d.name}
+                <span style={styles.actions}>
+                  <Link to={`/colleges/${collegeId}/departments/${d.id}/subjects`} style={styles.subjectLink}>Subjects</Link>
+                  <button type="button" style={styles.editBtn} onClick={() => startEdit(d)}>Edit</button>
+                  <button type="button" style={styles.deleteBtn} onClick={() => setDeleteConfirm({ id: d.id, name: d.name })}>Delete</button>
+                </span>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
 
       {deleteConfirm && (
         <div style={styles.overlay}>
@@ -128,16 +121,11 @@ export default function Departments() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: { width: 240, background: '#1a1a1a', padding: 24, borderRight: '1px solid #333' },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   form: { display: 'flex', gap: 12, marginBottom: 24 },
   input: {
     flex: 1,

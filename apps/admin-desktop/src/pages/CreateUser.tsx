@@ -59,88 +59,71 @@ export default function CreateUser() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Create {targetRole.replace('_', ' ')}</h1>
-        <p style={styles.subtitle}>
-          {isSuperAdmin
-            ? 'Assign a Department Admin to manage a department'
-            : 'Assign a Teacher to take attendance'}
-        </p>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-            minLength={6}
-          />
-          {isSuperAdmin && (
-            <div style={styles.field}>
-              <label style={styles.label}>Department</label>
-              <select
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                style={styles.select}
-                required
-              >
-                <option value="">Select department</option>
-                {departments.map((d: { id: string; name: string }) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          {isDeptAdmin && (
-            <div style={styles.field}>
-              <label style={styles.label}>Department</label>
-              <input
-                type="text"
-                value={departments.find((d: { id: string }) => d.id === user?.department_id)?.name ?? '—'}
-                readOnly
-                style={styles.input}
-              />
-            </div>
-          )}
-          {error && <p style={styles.error}>{error}</p>}
-          <button type="submit" style={styles.button} disabled={createUser.isPending}>
-            {createUser.isPending ? 'Creating...' : `Create ${targetRole.replace('_', ' ')}`}
-          </button>
-        </form>
-        <Link to={`/colleges/${collegeId}/users`} style={styles.backLink}>
-          ← Back to Users
-        </Link>
-      </main>
-    </div>
+    <>
+      <h1>Create {targetRole.replace('_', ' ')}</h1>
+      <p style={styles.subtitle}>
+        {isSuperAdmin
+          ? 'Assign a Department Admin to manage a department'
+          : 'Assign a Teacher to take attendance'}
+      </p>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={styles.input}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+          required
+          minLength={6}
+        />
+        {isSuperAdmin && (
+          <div style={styles.field}>
+            <label style={styles.label}>Department</label>
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              style={styles.select}
+              required
+            >
+              <option value="">Select department</option>
+              {departments.map((d: { id: string; name: string }) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {isDeptAdmin && (
+          <div style={styles.field}>
+            <label style={styles.label}>Department</label>
+            <input
+              type="text"
+              value={departments.find((d: { id: string }) => d.id === user?.department_id)?.name ?? '—'}
+              readOnly
+              style={styles.input}
+            />
+          </div>
+        )}
+        {error && <p style={styles.error}>{error}</p>}
+        <button type="submit" style={styles.button} disabled={createUser.isPending}>
+          {createUser.isPending ? 'Creating...' : `Create ${targetRole.replace('_', ' ')}`}
+        </button>
+      </form>
+      <Link to={`/colleges/${collegeId}/users`} style={styles.backLink}>
+        ← Back to Users
+      </Link>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: {
-    width: 240,
-    background: '#1a1a1a',
-    padding: 24,
-    borderRight: '1px solid #333',
-  },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   subtitle: { opacity: 0.7, marginBottom: 24 },
   form: { maxWidth: 400, marginTop: 24 },
   field: { marginBottom: 12 },

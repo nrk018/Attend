@@ -58,66 +58,49 @@ export default function EditCollege() {
     }
   };
 
-  if (isLoading || !college) return <div style={{ padding: 32 }}>Loading...</div>;
+  if (isLoading || !college) return <div>Loading...</div>;
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Edit College</h1>
-        <p style={styles.subtitle}>{college.name}</p>
-        <form onSubmit={handleSubmit} style={styles.form}>
+    <>
+      <h1>Edit College</h1>
+      <p style={styles.subtitle}>{college.name}</p>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <input
+          type="text"
+          placeholder="College name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={styles.input}
+          required
+        />
+        <div style={styles.logoSection}>
+          <label style={styles.label}>Logo</label>
           <input
-            type="text"
-            placeholder="College name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={styles.input}
-            required
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml"
+            onChange={handleFileChange}
+            style={styles.fileInput}
           />
-          <div style={styles.logoSection}>
-            <label style={styles.label}>Logo</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/svg+xml"
-              onChange={handleFileChange}
-              style={styles.fileInput}
-            />
-            {logoUrl && (
-              <div style={styles.previewRow}>
-                <img src={logoUrl} alt="Logo preview" style={styles.preview} />
-                <span style={styles.previewText}>Current / Uploaded</span>
-              </div>
-            )}
-            {uploading && <span style={styles.uploading}>Uploading...</span>}
-          </div>
-          {error && <p style={styles.error}>{error}</p>}
-          <button type="submit" style={styles.button} disabled={updateCollege.isPending}>
-            {updateCollege.isPending ? 'Saving...' : 'Save'}
-          </button>
-        </form>
-        <Link to="/colleges" style={styles.backLink}>← Back to Colleges</Link>
-      </main>
-    </div>
+          {logoUrl && (
+            <div style={styles.previewRow}>
+              <img src={logoUrl} alt="Logo preview" style={styles.preview} />
+              <span style={styles.previewText}>Current / Uploaded</span>
+            </div>
+          )}
+          {uploading && <span style={styles.uploading}>Uploading...</span>}
+        </div>
+        {error && <p style={styles.error}>{error}</p>}
+        <button type="submit" style={styles.button} disabled={updateCollege.isPending}>
+          {updateCollege.isPending ? 'Saving...' : 'Save'}
+        </button>
+      </form>
+      <Link to="/colleges" style={styles.backLink}>← Back to Colleges</Link>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: {
-    width: 240,
-    background: '#1a1a1a',
-    padding: 24,
-    borderRight: '1px solid #333',
-  },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   subtitle: { opacity: 0.7, marginBottom: 24 },
   form: { maxWidth: 400, marginTop: 24 },
   input: {

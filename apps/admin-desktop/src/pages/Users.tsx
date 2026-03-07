@@ -54,62 +54,55 @@ export default function Users() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <div style={styles.header}>
-          <h1>Users</h1>
-          {canCreateUser && (
-            <Link to={`/colleges/${collegeId}/users/new`} style={styles.addButton}>
-              + Create User
-            </Link>
-          )}
-        </div>
-        {isLoading && <p>Loading...</p>}
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Contact</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u: { id: string; email: string; role: string; name?: string; contact_number?: string }) => (
-              <tr key={u.id}>
-                <td>{u.name || '—'}</td>
-                <td>{u.contact_number || '—'}</td>
-                <td>{u.email}</td>
-                <td>{u.role}</td>
-                <td style={styles.actionsCell}>
+    <>
+      <div style={styles.header}>
+        <h1>Users</h1>
+        {canCreateUser && (
+          <Link to={`/colleges/${collegeId}/users/new`} style={styles.addButton}>
+            + Create User
+          </Link>
+        )}
+      </div>
+      {isLoading && <p>Loading...</p>}
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((u: { id: string; email: string; role: string; name?: string; contact_number?: string }) => (
+            <tr key={u.id}>
+              <td>{u.name || '—'}</td>
+              <td>{u.contact_number || '—'}</td>
+              <td>{u.email}</td>
+              <td>{u.role}</td>
+              <td style={styles.actionsCell}>
+                <button
+                  type="button"
+                  style={styles.resendBtn}
+                  onClick={() => handleResendClick(u)}
+                >
+                  Resend verification
+                </button>
+                {canDelete(u.role) && (
                   <button
                     type="button"
-                    style={styles.resendBtn}
-                    onClick={() => handleResendClick(u)}
+                    style={styles.deleteBtn}
+                    onClick={() => handleDeleteClick(u)}
                   >
-                    Resend verification
+                    Delete
                   </button>
-                  {canDelete(u.role) && (
-                    <button
-                      type="button"
-                      style={styles.deleteBtn}
-                      onClick={() => handleDeleteClick(u)}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </main>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {confirmUser && (
         <div style={styles.overlay}>
@@ -168,16 +161,11 @@ export default function Users() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: { width: 240, background: '#1a1a1a', padding: 24, borderRight: '1px solid #333' },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   addButton: {
     padding: '10px 20px',

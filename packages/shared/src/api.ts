@@ -14,6 +14,16 @@ export const ENDPOINTS = {
   departmentById: (id: string) => `/api/v1/departments/${id}`,
   SUBJECTS: '/api/v1/subjects',
   subjectById: (id: string) => `/api/v1/subjects/${id}`,
+  
+  // Sections
+  subjectSections: (subjectId: string) => `/api/v1/subjects/${subjectId}/sections`,
+  sectionById: (sectionId: string) => `/api/v1/sections/${sectionId}`,
+  sectionTeachers: (sectionId: string) => `/api/v1/sections/${sectionId}/teachers`,
+  sectionTeacher: (sectionId: string, teacherId: string) => `/api/v1/sections/${sectionId}/teachers/${teacherId}`,
+  sectionStudents: (sectionId: string) => `/api/v1/sections/${sectionId}/students`,
+  sectionStudent: (sectionId: string, studentId: string) => `/api/v1/sections/${sectionId}/students/${studentId}`,
+  MY_SECTIONS: '/api/v1/my-sections',
+  
   STUDENTS: '/api/v1/students',
   STUDENTS_GENERATE_EMBEDDINGS: '/api/v1/students/generate-embeddings',
   studentById: (id: string) => `/api/v1/students/${id}`,
@@ -29,7 +39,8 @@ export const ENDPOINTS = {
   ATTENDANCE_REPORT_SIMPLE_EXCEL: '/api/v1/attendance/report/simple-excel',
   ATTENDANCE_REPORT_SIMPLE_PDF: '/api/v1/attendance/report/simple-pdf',
   ATTENDANCE_SUBJECTS_WITH_REPORTS: '/api/v1/attendance/subjects-with-reports',
-  attendanceList: (subjectId: string) => `/api/v1/attendance/list?subject_id=${subjectId}`,
+  attendanceList: (subjectId: string, sectionId?: string) => 
+    `/api/v1/attendance/list?subject_id=${subjectId}${sectionId ? `&section_id=${sectionId}` : ''}`,
   attendanceById: (id: string) => `/api/v1/attendance/${id}`,
   attendanceDeleteReport: (subjectId: string) => `/api/v1/attendance/report/subject/${subjectId}`,
   ADMIN_STATS: '/api/v1/admin/stats',

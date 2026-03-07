@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Alert,
   ScrollView,
@@ -9,13 +8,18 @@ import {
   Modal,
   FlatList,
   Pressable,
+  View,
+  Text,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Text, View } from '@/components/Themed';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth';
 import { useColleges, useDepartments } from '@/lib/queries';
+import { GlassCard, GlassButton, GlassInput, IconBadge } from '@/components/ui';
+import { useThemeColors, colors as staticColors, spacing, typography, borderRadius } from '@/theme';
 
 export default function EnrollScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { user } = useAuthStore();
   const [step, setStep] = useState<1 | 2>(1);
@@ -32,7 +36,7 @@ export default function EnrollScreen() {
   const effectiveCollegeId = collegeId || user?.college_id || '';
   const { data: colleges = [] } = useColleges(isPlatformAdmin);
   const { data: departments = [] } = useDepartments(
-    isPlatformAdmin ? (collegeId || null) : (user?.college_id || null)
+    isPlatformAdmin ? collegeId || null : user?.college_id || null
   );
 
   useEffect(() => {
@@ -40,7 +44,11 @@ export default function EnrollScreen() {
   }, [user?.college_id, isPlatformAdmin]);
 
   useEffect(() => {
-    if (user?.department_id && (user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'TEACHER')) setDepartmentId(user.department_id);
+    if (
+      user?.department_id &&
+      (user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'TEACHER')
+    )
+      setDepartmentId(user.department_id);
   }, [user?.department_id, user?.role]);
 
   useEffect(() => {
@@ -51,6 +59,8 @@ export default function EnrollScreen() {
   const selectedDept = departments.find((d) => d.id === departmentId);
   const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN';
   const isTeacher = user?.role === 'TEACHER';
+  const isSuperAdmin =
+    String(user?.role ?? '').toUpperCase() === 'SUPER_ADMIN';
 
   const canProceedFromStep1 = effectiveCollegeId && departmentId;
 
@@ -66,7 +76,10 @@ export default function EnrollScreen() {
     const trimmedName = name.trim();
     if (!trimmedRegNo || !trimmedName) {
       setFieldError('Registration number and name are required');
-      Alert.alert('Validation Error', 'Please enter registration number and name.');
+      Alert.alert(
+        'Validation Error',
+        'Please enter registration number and name.'
+      );
       return;
     }
     if (!effectiveCollegeId || !effectiveDeptId) {
@@ -82,125 +95,199 @@ export default function EnrollScreen() {
     router.push(`/(tabs)/enroll-camera?${params.toString()}`);
   };
 
-  if (user?.role !== 'DEPARTMENT_ADMIN' && user?.role !== 'SUPER_ADMIN' && user?.role !== 'PLATFORM_ADMIN' && user?.role !== 'TEACHER') {
+  if (
+    user?.role !== 'DEPARTMENT_ADMIN' &&
+    user?.role !== 'SUPER_ADMIN' &&
+    user?.role !== 'PLATFORM_ADMIN' &&
+    user?.role !== 'TEACHER'
+  ) {
     return (
-      <View style={styles.container}>
-        <Text>Only admins and teachers can enroll students.</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassCard>
+          <Text style={[styles.restrictedText, { color: colors.textSecondary }]}>
+            Only admins and teachers can enroll students.
+          </Text>
+        </GlassCard>
       </View>
     );
   }
 
-  const isSuperAdmin = String(user?.role ?? '').toUpperCase() === 'SUPER_ADMIN';
-
   if (step === 1) {
     return (
-      <ScrollView style={styles.container}>
-        {isSuperAdmin && (
-          <TouchableOpacity
-            style={[styles.viewStudentsBtn, styles.createDeptAdminBtn]}
-            onPress={() => router.push('/(tabs)/create-department-admin')}
-          >
-            <Text style={styles.viewStudentsText}>Create Department Admin</Text>
-          </TouchableOpacity>
-        )}
-        {isDeptAdmin && (
-          <TouchableOpacity
-            style={[styles.viewStudentsBtn, styles.addTeacherBtn]}
-            onPress={() => router.push('/(tabs)/create-teacher')}
-          >
-            <Text style={styles.viewStudentsText}>Add Teacher</Text>
-          </TouchableOpacity>
-        )}
-        {!isTeacher && (
-          <TouchableOpacity
-            style={styles.viewStudentsBtn}
-            onPress={() => router.push('/(tabs)/student-list')}
-          >
-            <Text style={styles.viewStudentsText}>View Students • Edit Details</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.stepTitle}>Step 1: Select Department</Text>
-        <Text style={styles.stepHint}>Choose the department first. You can add student details next.</Text>
-        {isPlatformAdmin && (
-          <>
-            <Text style={styles.label}>College</Text>
-            <TouchableOpacity style={styles.select} onPress={() => setCollegeModalOpen(true)}>
-              <Text style={styles.selectText}>{selectedCollege?.name ?? 'Select college'}</Text>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.actionsRow}>
+          {isSuperAdmin && (
+            <TouchableOpacity
+              style={[styles.quickAction, styles.quickActionSuccess]}
+              onPress={() => router.push('/(tabs)/create-department-admin')}
+            >
+              <Ionicons
+                name="shield-checkmark"
+                size={18}
+                color={colors.success}
+              />
+              <Text style={[styles.quickActionText, { color: colors.success }]}>
+                Create Dept Admin
+              </Text>
             </TouchableOpacity>
-          </>
-        )}
-        <Text style={styles.label}>Department</Text>
-        {(isDeptAdmin || isTeacher) ? (
-          <View style={styles.select}>
-            <Text style={styles.selectText}>{selectedDept?.name ?? '—'}</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.select, !effectiveCollegeId && styles.selectDisabled]}
-            onPress={() => effectiveCollegeId && setDeptModalOpen(true)}
-            disabled={!effectiveCollegeId}
-          >
-            <Text style={styles.selectText}>
-              {selectedDept?.name ?? (effectiveCollegeId ? 'Select department' : 'Select college first')}
-            </Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.button, !canProceedFromStep1 && styles.buttonDisabled]}
+          )}
+          {isDeptAdmin && (
+            <TouchableOpacity
+              style={[styles.quickAction, styles.quickActionInfo]}
+              onPress={() => router.push('/(tabs)/create-teacher')}
+            >
+              <Ionicons name="school" size={18} color={colors.info} />
+              <Text style={[styles.quickActionText, { color: colors.info }]}>
+                Add Teacher
+              </Text>
+            </TouchableOpacity>
+          )}
+          {!isTeacher && (
+            <TouchableOpacity
+              style={styles.quickAction}
+              onPress={() => router.push('/(tabs)/student-list')}
+            >
+              <Ionicons name="people" size={18} color={colors.primary} />
+              <Text style={[styles.quickActionText, { color: colors.primary }]}>
+                View Students
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Step 1: Select Department</Text>
+        <Text style={[styles.stepHint, { color: colors.textMuted }]}>
+          Choose the department first. You can add student details next.
+        </Text>
+
+        <GlassCard style={styles.formCard}>
+          {isPlatformAdmin && (
+            <>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>College</Text>
+              <TouchableOpacity
+                style={[styles.select, { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass }]}
+                onPress={() => setCollegeModalOpen(true)}
+              >
+                <Text style={[styles.selectText, { color: colors.textPrimary }]}>
+                  {selectedCollege?.name ?? 'Select college'}
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </>
+          )}
+
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Department</Text>
+          {isDeptAdmin || isTeacher ? (
+            <View style={[styles.selectReadonly, { backgroundColor: colors.surfaceGlass, borderColor: colors.border }]}>
+              <Text style={[styles.selectText, { color: colors.textPrimary }]}>
+                {selectedDept?.name ?? '—'}
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.select,
+                { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
+                !effectiveCollegeId && styles.selectDisabled,
+              ]}
+              onPress={() => effectiveCollegeId && setDeptModalOpen(true)}
+              disabled={!effectiveCollegeId}
+            >
+              <Text style={[styles.selectText, { color: colors.textPrimary }]}>
+                {selectedDept?.name ??
+                  (effectiveCollegeId
+                    ? 'Select department'
+                    : 'Select college first')}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          )}
+        </GlassCard>
+
+        <GlassButton
+          variant="primary"
+          size="lg"
           onPress={handleContinueFromStep1}
           disabled={!canProceedFromStep1}
+          style={styles.continueButton}
         >
-          <Text style={styles.buttonText}>Continue</Text>
-        </TouchableOpacity>
+          Continue
+        </GlassButton>
 
         <Modal visible={collegeModalOpen} transparent animationType="slide">
-          <Pressable style={styles.modalOverlay} onPress={() => setCollegeModalOpen(false)}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select College</Text>
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setCollegeModalOpen(false)}
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Select College</Text>
               <FlatList
                 data={colleges}
                 keyExtractor={(c) => c.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.modalItem}
+                    style={[styles.modalItem, { borderBottomColor: colors.border }]}
                     onPress={() => {
                       setCollegeId(item.id);
                       setCollegeModalOpen(false);
                     }}
                   >
-                    <Text>{item.name}</Text>
+                    <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{item.name}</Text>
                   </TouchableOpacity>
                 )}
               />
-              <TouchableOpacity style={styles.modalClose} onPress={() => setCollegeModalOpen(false)}>
-                <Text style={styles.modalCloseText}>Cancel</Text>
-              </TouchableOpacity>
+              <GlassButton
+                variant="ghost"
+                size="md"
+                onPress={() => setCollegeModalOpen(false)}
+              >
+                Cancel
+              </GlassButton>
             </View>
           </Pressable>
         </Modal>
 
         <Modal visible={deptModalOpen} transparent animationType="slide">
-          <Pressable style={styles.modalOverlay} onPress={() => setDeptModalOpen(false)}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Department</Text>
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setDeptModalOpen(false)}
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Select Department</Text>
               <FlatList
                 data={departments}
                 keyExtractor={(d) => d.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.modalItem}
+                    style={[styles.modalItem, { borderBottomColor: colors.border }]}
                     onPress={() => {
                       setDepartmentId(item.id);
                       setDeptModalOpen(false);
                     }}
                   >
-                    <Text>{item.name}</Text>
+                    <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{item.name}</Text>
                   </TouchableOpacity>
                 )}
               />
-              <TouchableOpacity style={styles.modalClose} onPress={() => setDeptModalOpen(false)}>
-                <Text style={styles.modalCloseText}>Cancel</Text>
-              </TouchableOpacity>
+              <GlassButton
+                variant="ghost"
+                size="md"
+                onPress={() => setDeptModalOpen(false)}
+              >
+                Cancel
+              </GlassButton>
             </View>
           </Pressable>
         </Modal>
@@ -209,85 +296,199 @@ export default function EnrollScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <TouchableOpacity style={styles.backLink} onPress={() => setStep(1)}>
-        <Text style={styles.backLinkText}>← Change department</Text>
+        <Ionicons name="arrow-back" size={20} color={colors.primary} />
+        <Text style={[styles.backLinkText, { color: colors.primary }]}>Change department</Text>
       </TouchableOpacity>
-      <Text style={styles.stepTitle}>Step 2: Student Details</Text>
-      <Text style={styles.deptBadge}>{selectedDept?.name}</Text>
 
-      <Text style={styles.label}>Registration No</Text>
-      <TextInput style={styles.input} value={regNo} onChangeText={setRegNo} placeholder="e.g. 2024001" />
-      <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Student name" />
+      <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Step 2: Student Details</Text>
+      <View style={styles.deptBadge}>
+        <Ionicons name="school-outline" size={16} color={colors.primary} />
+        <Text style={[styles.deptBadgeText, { color: colors.primary }]}>{selectedDept?.name}</Text>
+      </View>
 
-      {fieldError && <Text style={styles.error}>{fieldError}</Text>}
-      <TouchableOpacity style={styles.button} onPress={handleEnroll} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Enroll (Open Camera)</Text>}
-      </TouchableOpacity>
+      <GlassCard style={styles.formCard}>
+        <GlassInput
+          label="Registration No"
+          value={regNo}
+          onChangeText={setRegNo}
+          placeholder="e.g. 2024001"
+          leftIcon={
+            <Ionicons
+              name="card-outline"
+              size={20}
+              color={colors.textMuted}
+            />
+          }
+        />
+        <GlassInput
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Student name"
+          leftIcon={
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={colors.textMuted}
+            />
+          }
+        />
+        {fieldError && <Text style={[styles.error, { color: colors.error }]}>{fieldError}</Text>}
+      </GlassCard>
+
+      <GlassButton
+        variant="primary"
+        size="lg"
+        onPress={handleEnroll}
+        loading={loading}
+        disabled={loading}
+        style={styles.continueButton}
+        leftIcon={<Ionicons name="camera" size={20} color={colors.textOnPrimary} />}
+      >
+        Enroll (Open Camera)
+      </GlassButton>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  stepTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  stepHint: { fontSize: 14, opacity: 0.7, marginBottom: 24 },
-  deptBadge: { fontSize: 14, opacity: 0.8, marginBottom: 20 },
-  viewStudentsBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0,122,255,0.15)',
-    borderRadius: 8,
+  container: {
+    flex: 1,
   },
-  createDeptAdminBtn: { backgroundColor: 'rgba(52,199,89,0.25)' },
-  addTeacherBtn: { backgroundColor: 'rgba(88,86,214,0.25)' },
-  viewStudentsText: { color: '#007AFF', fontSize: 15, fontWeight: '600' },
-  backLink: { alignSelf: 'flex-start', marginBottom: 16 },
-  backLinkText: { color: '#007AFF', fontSize: 14 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 4, marginTop: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+  content: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(0, 200, 83, 0.1)',
+    borderRadius: borderRadius.sm,
+  },
+  quickActionSuccess: {
+    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+  },
+  quickActionInfo: {
+    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+  },
+  quickActionText: {
+    ...typography.buttonSmall,
+  },
+  stepTitle: {
+    ...typography.h3,
+    color: staticColors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  stepHint: {
+    ...typography.body,
+    color: staticColors.textMuted,
+    marginBottom: spacing.xl,
+  },
+  formCard: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    ...typography.label,
+    color: staticColors.textSecondary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
   },
   select: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  selectDisabled: { opacity: 0.6 },
-  selectText: { fontSize: 16 },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'space-between',
+    backgroundColor: staticColors.surfaceGlass,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: staticColors.borderGlass,
+    padding: spacing.md,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  error: { color: '#ff3b30', marginTop: 8, fontSize: 14 },
+  selectReadonly: {
+    backgroundColor: staticColors.surfaceGlass,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: staticColors.border,
+    padding: spacing.md,
+    opacity: 0.7,
+  },
+  selectDisabled: {
+    opacity: 0.5,
+  },
+  selectText: {
+    ...typography.body,
+    color: staticColors.textPrimary,
+  },
+  continueButton: {
+    marginTop: spacing.lg,
+  },
+  backLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  backLinkText: {
+    ...typography.body,
+    color: staticColors.primary,
+  },
+  deptBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  deptBadgeText: {
+    ...typography.bodySmall,
+    color: staticColors.primary,
+  },
+  error: {
+    ...typography.caption,
+    color: staticColors.error,
+    marginTop: spacing.sm,
+  },
+  restrictedText: {
+    ...typography.body,
+    textAlign: 'center',
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: staticColors.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
+    backgroundColor: staticColors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
     maxHeight: '70%',
   },
-  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
-  modalItem: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalClose: { marginTop: 16, alignItems: 'center' },
-  modalCloseText: { fontSize: 16, color: '#007AFF' },
+  modalTitle: {
+    ...typography.h3,
+    color: staticColors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  modalItem: {
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: staticColors.border,
+  },
+  modalItemText: {
+    ...typography.body,
+    color: staticColors.textPrimary,
+  },
 });

@@ -108,7 +108,7 @@ def list_users(
     return result.data or []
 
 
-def _can_delete_user(actor_role: str, target_role: str, actor_college_id: str | None, actor_dept_id: str | None, target_college_id: str | None, target_dept_id: str | None) -> bool:
+def _can_delete_user(actor_role: str, target_role: str, actor_college_id: Optional[str], actor_dept_id: Optional[str], target_college_id: Optional[str], target_dept_id: Optional[str]) -> bool:
     """Platform Admin can delete Super Admin; Super Admin can delete Dept Admin/Teacher in their college; Dept Admin can delete Teacher in their dept."""
     if actor_role == "PLATFORM_ADMIN":
         return target_role == "SUPER_ADMIN"

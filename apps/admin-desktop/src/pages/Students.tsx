@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useStudents, useDepartments, useUpdateStudent, useDeleteStudent, useGenerateEmbeddings } from '../lib/queries';
 
 type Student = { id: string; reg_no: string; name: string; department_id: string };
@@ -48,62 +48,55 @@ export default function Students() {
   };
 
   return (
-    <div style={styles.layout}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.logo}>Attend</h2>
-        <Link to="/" style={styles.navLink}>Dashboard</Link>
-        <Link to="/colleges" style={styles.navLink}>Colleges</Link>
-      </aside>
-      <main style={styles.main}>
-        <h1>Students</h1>
-        <p style={styles.note}>Enroll students via the mobile app (Department Admin). Edit or delete below.</p>
-        {collegeId && (
-          <button
-            type="button"
-            style={styles.embedBtn}
-            onClick={async () => {
-              try {
-                const res = await generateEmbeddings.mutateAsync();
-                const msg = res.generated > 0
-                  ? `Generated ${res.generated} embedding(s). Recognition works immediately—no restart needed.`
-                  : res.skipped > 0
-                    ? 'All students already have embeddings.'
-                    : 'No students with face images need embeddings.';
-                alert(res.failed?.length ? `${msg}\n\nFailed: ${res.failed.join('; ')}` : msg);
-              } catch (e: any) {
-                alert(e?.response?.data?.detail ?? 'Failed to generate embeddings');
-              }
-            }}
-            disabled={generateEmbeddings.isPending}
-          >
-            {generateEmbeddings.isPending ? 'Generating...' : 'Generate embeddings'}
-          </button>
-        )}
-        {isLoading && <p>Loading...</p>}
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>Reg No</th>
-              <th>Name</th>
-              <th>Department</th>
-              <th>Actions</th>
+    <>
+      <h1>Students</h1>
+      <p style={styles.note}>Enroll students via the mobile app (Department Admin). Edit or delete below.</p>
+      {collegeId && (
+        <button
+          type="button"
+          style={styles.embedBtn}
+          onClick={async () => {
+            try {
+              const res = await generateEmbeddings.mutateAsync();
+              const msg = res.generated > 0
+                ? `Generated ${res.generated} embedding(s). Recognition works immediately—no restart needed.`
+                : res.skipped > 0
+                  ? 'All students already have embeddings.'
+                  : 'No students with face images need embeddings.';
+              alert(res.failed?.length ? `${msg}\n\nFailed: ${res.failed.join('; ')}` : msg);
+            } catch (e: any) {
+              alert(e?.response?.data?.detail ?? 'Failed to generate embeddings');
+            }
+          }}
+          disabled={generateEmbeddings.isPending}
+        >
+          {generateEmbeddings.isPending ? 'Generating...' : 'Generate embeddings'}
+        </button>
+      )}
+      {isLoading && <p>Loading...</p>}
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th>Reg No</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((s: Student) => (
+            <tr key={s.id}>
+              <td>{s.reg_no}</td>
+              <td>{s.name}</td>
+              <td>{deptName(s.department_id)}</td>
+              <td>
+                <button type="button" style={styles.editBtn} onClick={() => startEdit(s)}>Edit</button>
+                <button type="button" style={styles.deleteBtn} onClick={() => setDeleteConfirm(s)}>Delete</button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {students.map((s: Student) => (
-              <tr key={s.id}>
-                <td>{s.reg_no}</td>
-                <td>{s.name}</td>
-                <td>{deptName(s.department_id)}</td>
-                <td>
-                  <button type="button" style={styles.editBtn} onClick={() => startEdit(s)}>Edit</button>
-                  <button type="button" style={styles.deleteBtn} onClick={() => setDeleteConfirm(s)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </main>
+          ))}
+        </tbody>
+      </table>
 
       {editing && (
         <div style={styles.overlay}>
@@ -155,16 +148,11 @@ export default function Students() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', minHeight: '100vh' },
-  sidebar: { width: 240, background: '#1a1a1a', padding: 24, borderRight: '1px solid #333' },
-  logo: { margin: '0 0 24px', fontSize: 20 },
-  navLink: { display: 'block', color: '#e0e0e0', padding: 8, textDecoration: 'none' },
-  main: { flex: 1, padding: 32 },
   note: { opacity: 0.7, marginBottom: 24 },
   embedBtn: { marginBottom: 24, padding: '10px 20px', background: '#34C759', border: 'none', color: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
   table: { width: '100%', borderCollapse: 'collapse' },

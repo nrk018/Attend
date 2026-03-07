@@ -30,10 +30,12 @@ type CaptureMode = 'photo' | 'live';
 export default function AttendanceCameraScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const rawParams = useLocalSearchParams<{ subject_id?: string; subject_name?: string; test_mode?: string }>();
+  const rawParams = useLocalSearchParams<{ subject_id?: string; subject_name?: string; section_id?: string; section_name?: string; test_mode?: string }>();
   const params = {
     subject_id: Array.isArray(rawParams.subject_id) ? rawParams.subject_id[0] : rawParams.subject_id,
     subject_name: Array.isArray(rawParams.subject_name) ? rawParams.subject_name[0] : rawParams.subject_name,
+    section_id: Array.isArray(rawParams.section_id) ? rawParams.section_id[0] : rawParams.section_id,
+    section_name: Array.isArray(rawParams.section_name) ? rawParams.section_name[0] : rawParams.section_name,
     test_mode: Array.isArray(rawParams.test_mode) ? rawParams.test_mode[0] : rawParams.test_mode,
   };
   const isTestMode = params.test_mode === 'true';
@@ -119,6 +121,7 @@ export default function AttendanceCameraScreen() {
       if (!photo?.uri) throw new Error('No photo captured');
       const formData = new FormData();
       if (!isTestMode && params.subject_id) formData.append('subject_id', params.subject_id);
+      if (!isTestMode && params.section_id) formData.append('section_id', params.section_id);
       formData.append('image', {
         uri: photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`,
         type: 'image/jpeg',
@@ -186,6 +189,7 @@ export default function AttendanceCameraScreen() {
       if (!isTestMode) {
         formData.append('session_id', sessionId);
         formData.append('subject_id', params.subject_id!);
+        if (params.section_id) formData.append('section_id', params.section_id);
       }
       formData.append('image', {
         uri: photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`,
@@ -303,6 +307,7 @@ export default function AttendanceCameraScreen() {
             {
               student_id: r.student_id,
               subject_id: params.subject_id,
+              section_id: params.section_id || undefined,
               confidence: r.confidence,
               face_crop_base64: r.face_crop_base64 ?? undefined,
             },
@@ -398,6 +403,7 @@ export default function AttendanceCameraScreen() {
         .map((r) => ({
           student_id: r.student_id!,
           subject_id: params.subject_id!,
+          section_id: params.section_id || undefined,
           confidence: r.confidence,
           face_crop_base64: r.face_crop_base64 ?? undefined,
         }));
@@ -679,7 +685,7 @@ export default function AttendanceCameraScreen() {
           {isTestMode
             ? 'Test recognition – capture or start live'
             : params.subject_name
-              ? `Subject: ${params.subject_name}${acceptedRecords.length > 0 ? ` • Saved: ${acceptedRecords.length}` : ''}${livePaused ? ' • Tap Continue to scan more' : ''}`
+              ? `${params.subject_name}${params.section_name ? ` (${params.section_name})` : ''}${acceptedRecords.length > 0 ? ` • Saved: ${acceptedRecords.length}` : ''}${livePaused ? ' • Tap Continue to scan more' : ''}`
               : 'Capture classroom'}
         </Text>
         {mode === 'photo' ? (
