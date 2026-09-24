@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -18,7 +19,13 @@ export default function ReportsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const departmentId = user?.department_id ?? null;
-  const { data: subjects = [], isLoading } = useSubjectsWithReports(departmentId);
+  const { data: subjects = [], isLoading, refetch } = useSubjectsWithReports(departmentId);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   if (isLoading) {
     return (
@@ -40,8 +47,8 @@ export default function ReportsScreen() {
       <Text style={[styles.title, { color: colors.textPrimary }]}>Attendance Reports</Text>
       <Text style={[styles.subtitle, { color: colors.textMuted }]}>
         {subjects.length === 0
-          ? 'No attendance data yet. Reports appear after you capture attendance.'
-          : 'Tap a subject to view attendance by date'}
+          ? 'No saved classes yet. Reports appear after you tap Save class.'
+          : 'Tap a subject to view saved classes'}
       </Text>
 
       {subjects.length === 0 ? (
@@ -55,7 +62,7 @@ export default function ReportsScreen() {
           </IconBadge>
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Reports Yet</Text>
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            Start taking attendance to see reports here
+            Start taking attendance, then tap Save class to see reports here
           </Text>
         </GlassCard>
       ) : (

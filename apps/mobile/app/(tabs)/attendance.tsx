@@ -1,14 +1,45 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, Text, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth';
-import { useMySections } from '@/lib/queries';
+import { useMySections, useAttendanceClasses, useAttendanceClass } from '@/lib/queries';
+import { api } from '@/lib/api';
+import { ENDPOINTS } from '@attend/shared';
 import { GlassCard, GlassButton, IconBadge } from '@/components/ui';
 import { useThemeColors, colors as staticColors, spacing, typography, shadows } from '@/theme';
 
 type MySectionItem = { id: string; name: string; created_at?: string };
 type MySectionsSubject = { subject_id: string; subject_name: string; sections: MySectionItem[] };
+type ClassRow = {
+  id: string;
+  name: string;
+  class_date: string;
+  present_count?: number;
+  section_name?: string | null;
+};
+
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function shiftIsoDate(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+function formatDisplayDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export default function AttendanceScreen() {
   const colors = useThemeColors();
@@ -16,6 +47,9 @@ export default function AttendanceScreen() {
   const { user } = useAuthStore();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [classDate, setClassDate] = useState(localToday);
+  const [creatingClass, setCreatingClass] = useState(false);
+  const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isTeacherOrDeptAdmin = user?.role === 'TEACHER' || user?.role === 'DEPARTMENT_ADMIN';
@@ -25,23 +59,64 @@ export default function AttendanceScreen() {
   const subjectsFromMySections = mySections.map((s) => ({ id: s.subject_id, name: s.subject_name }));
   const selectedSubjectData = mySections.find((s) => s.subject_id === selectedSubject);
   const sectionsFromMySections = selectedSubjectData?.sections ?? [];
+  const sectionReady = !!selectedSubject && (sectionsFromMySections.length === 0 || !!selectedSection);
+  const { data: dayClasses = [], isLoading: classesLoading, isError: classesError, refetch: refetchClasses } = useAttendanceClasses(
+    sectionReady ? selectedSubject : null,
+    selectedSection,
+    classDate
+  );
+  const { data: expandedClass, isLoading: expandedLoading } = useAttendanceClass(expandedClassId);
 
   useEffect(() => {
     setSelectedSection(null);
+    setExpandedClassId(null);
   }, [selectedSubject]);
 
-  const handleTakeAttendance = () => {
+  useEffect(() => {
+    setExpandedClassId(null);
+  }, [classDate, selectedSection]);
+
+  const openClassSession = (cls: { id: string; name: string; class_date?: string }) => {
     const subject = subjectsFromMySections.find((s) => s.id === selectedSubject);
     const section = sectionsFromMySections.find((s) => s.id === selectedSection);
     router.push({
       pathname: '/(tabs)/attendance-camera',
       params: {
+        class_id: cls.id,
+        class_name: cls.name,
+        class_date: cls.class_date || classDate,
         subject_id: selectedSubject!,
         subject_name: subject?.name ?? '',
         section_id: selectedSection ?? '',
         section_name: section?.name ?? '',
       },
     });
+  };
+
+  const handleStartNewClass = async () => {
+    if (!selectedSubject) return;
+    setCreatingClass(true);
+    try {
+      const { data } = await api.post(ENDPOINTS.ATTENDANCE_CLASSES, {
+        subject_id: selectedSubject,
+        section_id: selectedSection || undefined,
+        class_date: classDate,
+      });
+      await refetchClasses();
+      openClassSession({ id: data.id, name: data.name, class_date: data.class_date || classDate });
+    } catch (e: unknown) {
+      const ax = e as { response?: { data?: { detail?: unknown }; status?: number }; message?: string };
+      const detail = ax?.response?.data?.detail;
+      let msg = ax?.message || 'Please try again.';
+      if (typeof detail === 'string' && detail) msg = detail;
+      else if (Array.isArray(detail) && detail[0]) {
+        const first = detail[0] as { msg?: string };
+        msg = first?.msg || JSON.stringify(detail);
+      } else if (detail) msg = JSON.stringify(detail);
+      Alert.alert('Could not start class', msg);
+    } finally {
+      setCreatingClass(false);
+    }
   };
 
   const handleTestRecognition = () => {
@@ -106,7 +181,7 @@ export default function AttendanceScreen() {
       <Text style={[styles.subtitle, { color: colors.textMuted }]}>
         {isSuperAdmin
           ? 'Test recognition or select subject'
-          : 'Select subject and open camera'}
+          : 'Select subject, date, then start or resume a class'}
       </Text>
 
       {isSuperAdmin && (
@@ -250,22 +325,139 @@ export default function AttendanceScreen() {
             </>
           )}
 
-          <GlassButton
-            variant="primary"
-            size="lg"
-            onPress={handleTakeAttendance}
-            disabled={!selectedSubject || (sectionsFromMySections.length > 0 && !selectedSection)}
-            style={styles.cameraButton}
-            leftIcon={
-              <Ionicons
-                name="camera"
-                size={20}
-                color={colors.textOnPrimary}
-              />
-            }
-          >
-            Open Camera
-          </GlassButton>
+          {sectionReady && (
+            <>
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>STEP 3: CLASS DATE</Text>
+              <GlassCard variant="solid" style={styles.dateCard}>
+                <View style={styles.dateRow}>
+                  <TouchableOpacity
+                    onPress={() => setClassDate((d) => shiftIsoDate(d, -1))}
+                    style={styles.dateArrow}
+                  >
+                    <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                  </TouchableOpacity>
+                  <View style={styles.dateCenter}>
+                    <Text style={[styles.dateValue, { color: colors.textPrimary }]}>
+                      {formatDisplayDate(classDate)}
+                    </Text>
+                    {classDate !== localToday() && (
+                      <TouchableOpacity onPress={() => setClassDate(localToday())}>
+                        <Text style={[styles.todayLink, { color: colors.primary }]}>Jump to today</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setClassDate((d) => shiftIsoDate(d, 1))}
+                    style={styles.dateArrow}
+                  >
+                    <Ionicons name="chevron-forward" size={22} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </GlassCard>
+
+              <Text style={[styles.stepLabel, { color: colors.textMuted }]}>STEP 4: CLASS</Text>
+              {classesLoading ? (
+                <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.lg }} />
+              ) : classesError ? (
+                <GlassCard variant="solid" style={styles.noSectionsCard}>
+                  <Text style={[styles.noSectionsText, { color: colors.textSecondary }]}>
+                    Could not load classes. Pull back and try again, or start a new period.
+                  </Text>
+                </GlassCard>
+              ) : (dayClasses as ClassRow[]).length > 0 ? (
+                <GlassCard style={styles.subjectsCard} variant="solid">
+                  {(dayClasses as ClassRow[]).map((cls, index, arr) => {
+                    const expanded = expandedClassId === cls.id;
+                    const records = (expandedClass?.records || []) as {
+                      student_id: string;
+                      students?: { name?: string; reg_no?: string } | null;
+                      source?: string;
+                    }[];
+                    return (
+                      <View
+                        key={cls.id}
+                        style={index < arr.length - 1 && !expanded ? styles.subjectItemBorder : undefined}
+                      >
+                        <TouchableOpacity
+                          style={styles.subjectItem}
+                          onPress={() => setExpandedClassId(expanded ? null : cls.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.subjectInfo}>
+                            <IconBadge variant="primary" size="md">
+                              <Ionicons name="albums-outline" size={20} color={colors.primary} />
+                            </IconBadge>
+                            <View>
+                              <Text style={[styles.subjectName, { color: colors.textPrimary }]}>{cls.name}</Text>
+                              <Text style={[styles.classMeta, { color: colors.primary }]}>
+                                {cls.present_count ?? 0} present · tap to view list
+                              </Text>
+                            </View>
+                          </View>
+                          <Ionicons
+                            name={expanded ? 'chevron-up' : 'chevron-down'}
+                            size={20}
+                            color={colors.primary}
+                          />
+                        </TouchableOpacity>
+                        {expanded && (
+                          <View style={styles.presentList}>
+                            {expandedLoading ? (
+                              <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
+                            ) : records.length === 0 ? (
+                              <Text style={[styles.classMeta, { color: colors.textMuted, marginBottom: spacing.sm }]}>
+                                No students marked yet.
+                              </Text>
+                            ) : (
+                              records.map((r) => (
+                                <View key={r.student_id} style={styles.presentRow}>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={[styles.presentName, { color: colors.textPrimary }]}>
+                                      {r.students?.name || 'Student'}
+                                    </Text>
+                                    <Text style={[styles.classMeta, { color: colors.textMuted }]}>
+                                      {r.students?.reg_no || '—'}
+                                      {r.source === 'manual' ? ' · Manual' : ''}
+                                    </Text>
+                                  </View>
+                                </View>
+                              ))
+                            )}
+                            <GlassButton
+                              variant="secondary"
+                              size="md"
+                              onPress={() => openClassSession(cls)}
+                              style={styles.resumeBtn}
+                            >
+                              Resume capture
+                            </GlassButton>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </GlassCard>
+              ) : (
+                <GlassCard variant="solid" style={styles.noSectionsCard}>
+                  <Text style={[styles.noSectionsText, { color: colors.textSecondary }]}>
+                    No class yet on this date. Start a new period.
+                  </Text>
+                </GlassCard>
+              )}
+
+              <GlassButton
+                variant="primary"
+                size="lg"
+                onPress={handleStartNewClass}
+                disabled={creatingClass}
+                loading={creatingClass}
+                style={styles.cameraButton}
+                leftIcon={<Ionicons name="add-circle" size={20} color={colors.textOnPrimary} />}
+              >
+                Start new class
+              </GlassButton>
+            </>
+          )}
         </>
       )}
     </ScrollView>
@@ -413,6 +605,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cameraButton: {
+    marginTop: spacing.md,
+  },
+  dateCard: {
+    marginBottom: spacing.lg,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateArrow: {
+    padding: spacing.sm,
+  },
+  dateCenter: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateValue: {
+    ...typography.h3,
+    textAlign: 'center',
+  },
+  todayLink: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+  },
+  classMeta: {
+    ...typography.caption,
+    marginTop: 2,
+  },
+  presentList: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  presentRow: {
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: staticColors.border,
+  },
+  presentName: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  resumeBtn: {
     marginTop: spacing.md,
   },
 });

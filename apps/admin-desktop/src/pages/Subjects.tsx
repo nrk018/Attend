@@ -8,7 +8,8 @@ export default function Subjects() {
   const [error, setError] = useState('');
   const [editingSubject, setEditingSubject] = useState<{ id: string; name: string } | null>(null);
   const [editName, setEditName] = useState('');
-  const { data: subjects = [], isLoading } = useSubjects(departmentId ?? null);
+  const { data, isLoading, isError, error: loadError } = useSubjects(departmentId ?? null);
+  const subjects = Array.isArray(data) ? data : [];
   const { data: departments = [] } = useDepartments(collegeId ?? null);
   const createSubject = useCreateSubject(departmentId ?? '');
   const updateSubject = useUpdateSubject(departmentId ?? '');
@@ -86,12 +87,29 @@ export default function Subjects() {
       </form>
       {isLoading ? (
         <p>Loading...</p>
+      ) : isError ? (
+        <p style={{ color: '#ff6b6b' }}>
+          {(loadError as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+            || (loadError as Error)?.message
+            || 'Failed to load subjects'}
+        </p>
       ) : (
         <ul style={styles.list}>
           {subjects.map((s: { id: string; name: string }) => (
             <li key={s.id} style={styles.item}>
-              <span>{s.name}</span>
+              <Link
+                to={`/colleges/${collegeId}/departments/${departmentId}/subjects/${s.id}`}
+                style={styles.subjectLink}
+              >
+                {s.name}
+              </Link>
               <span style={styles.rowActions}>
+                <Link
+                  to={`/colleges/${collegeId}/departments/${departmentId}/subjects/${s.id}`}
+                  style={styles.studentsLink}
+                >
+                  Students
+                </Link>
                 <button
                   type="button"
                   style={styles.actionBtn}
@@ -170,7 +188,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  rowActions: { display: 'flex', gap: 8 },
+  subjectLink: { color: '#e0e0e0', textDecoration: 'none', fontWeight: 600 },
+  studentsLink: { color: '#007AFF', textDecoration: 'none', fontSize: 13, padding: '6px 0' },
+  rowActions: { display: 'flex', gap: 8, alignItems: 'center' },
   actionBtn: {
     padding: '6px 12px',
     background: 'transparent',

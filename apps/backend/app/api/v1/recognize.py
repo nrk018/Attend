@@ -2,8 +2,24 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.auth.deps import require_teacher, require_roles
+from app.auth.deps import require_teacher
+from app.db.supabase import get_supabase
 from app.services.attendance import recognize_faces, create_stream_session, clear_stream_session
+
+
+def _assert_teacher_subject(user: dict, subject_id: str) -> None:
+    supabase = get_supabase()
+    user_id = user.get("user_id") or user.get("sub")
+    st = supabase.table("subject_teachers").select("subject_id").eq("teacher_id", user_id).eq("subject_id", subject_id).execute()
+    if st.data:
+        return
+    assigned = supabase.table("section_teachers").select("section_id").eq("teacher_id", user_id).execute()
+    section_ids = [r["section_id"] for r in (assigned.data or []) if r.get("section_id")]
+    if section_ids:
+        secs = supabase.table("sections").select("subject_id").in_("id", section_ids).eq("subject_id", subject_id).execute()
+        if secs.data:
+            return
+    raise HTTPException(status_code=403, detail="Cannot access this subject")
 
 router = APIRouter()
 
@@ -19,6 +35,7 @@ async def recognize(
     college_id = user.get("college_id")
     if not college_id:
         raise HTTPException(status_code=400, detail="User must have college_id")
+    _assert_teacher_subject(user, subject_id)
 
     try:
         image_bytes = await image.read()
@@ -54,6 +71,7 @@ async def recognize_stream(
     college_id = user.get("college_id")
     if not college_id:
         raise HTTPException(status_code=400, detail="User must have college_id")
+    _assert_teacher_subject(user, subject_id)
 
     image_bytes = await image.read()
     results, img_h, img_w = recognize_faces(
@@ -75,26 +93,3 @@ def stream_end(
     return {"status": "ok"}
 
 
-@router.post("/test")
-async def recognize_test(
-    image: UploadFile = File(...),
-    user: dict = Depends(require_roles("SUPER_ADMIN")),
-):
-    """Super admin only: test recognition without subject. Recognizes all students in college."""
-    college_id = user.get("college_id")
-    if not college_id:
-        raise HTTPException(status_code=400, detail="Super admin must have college_id to test")
-
-    try:
-        image_bytes = await image.read()
-        results, img_h, img_w = recognize_faces(
-            image_bytes=image_bytes,
-            college_id=college_id,
-            subject_id=None,
-            session_id=None,
-        )
-        return {"results": results, "image_width": img_w, "image_height": img_h}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Recognition failed: {str(e)}")

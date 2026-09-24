@@ -47,28 +47,82 @@ export function useAttendanceList(subjectId: string | null) {
   });
 }
 
-export function useSubjectsWithReports(departmentId: string | null) {
+export function useAttendanceClasses(
+  subjectId: string | null,
+  sectionId?: string | null,
+  classDate?: string | null
+) {
   return useQuery({
-    queryKey: ['subjects-with-reports', departmentId],
+    queryKey: ['attendance-classes', subjectId, sectionId ?? '', classDate ?? ''],
     queryFn: async () => {
-      const { data } = await api.get(`/api/v1/attendance/subjects-with-reports?department_id=${departmentId}`);
+      const params = new URLSearchParams({ subject_id: subjectId! });
+      if (sectionId) params.set('section_id', sectionId);
+      if (classDate) params.set('class_date', classDate);
+      const { data } = await api.get(`/api/v1/attendance/classes?${params.toString()}`);
       return data ?? [];
     },
-    enabled: !!departmentId,
+    enabled: !!subjectId,
+    refetchOnMount: 'always',
   });
 }
 
-export function useStudents(collegeId: string | null, departmentId: string | null, enabled: boolean) {
+export function useAttendanceClass(classId: string | null) {
   return useQuery({
-    queryKey: ['students', collegeId, departmentId],
+    queryKey: ['attendance-class', classId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.attendanceClassById(classId!));
+      return data;
+    },
+    enabled: !!classId,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useSubjectsWithReports(departmentId: string | null) {
+  return useQuery({
+    queryKey: ['subjects-with-reports', departmentId ?? 'all'],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (departmentId) params.set('department_id', departmentId);
+      const qs = params.toString();
+      const { data } = await api.get(
+        `/api/v1/attendance/subjects-with-reports${qs ? `?${qs}` : ''}`
+      );
+      return data ?? [];
+    },
+    refetchOnMount: 'always',
+  });
+}
+
+export function useStudents(
+  collegeId: string | null,
+  departmentId: string | null,
+  enabled: boolean,
+  includePhotos = true
+) {
+  return useQuery({
+    queryKey: ['students', collegeId, departmentId, includePhotos],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (collegeId) params.set('college_id', collegeId);
       if (departmentId) params.set('department_id', departmentId);
+      if (!includePhotos) params.set('include_photos', 'false');
       const { data } = await api.get(`/api/v1/students?${params.toString()}`);
       return data ?? [];
     },
     enabled,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useSection(sectionId: string | null) {
+  return useQuery({
+    queryKey: ['section', sectionId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.sectionById(sectionId!));
+      return data as { id: string; department_id?: string; subject_id?: string };
+    },
+    enabled: !!sectionId,
   });
 }
 
