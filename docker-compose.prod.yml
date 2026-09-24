@@ -1,0 +1,44 @@
+# Production: FastAPI behind nginx. Do not publish :8000.
+# Usage on the VPS (from repo root):
+#   cp deploy/attend.env.example deploy/attend.env   # set ATTEND_API_HOST
+#   cp apps/backend/.env.example apps/backend/.env   # real secrets
+#   ./scripts/vps-up.sh
+
+services:
+  backend:
+    build: ./apps/backend
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      DEBUG: "false"
+      FACE_EXECUTION_PROVIDER: ${FACE_EXECUTION_PROVIDER:-cpu}
+      APP_BASE_URL: "https://${ATTEND_API_HOST}"
+      STUDENT_WEB_URL: "${STUDENT_WEB_URL:-https://register.builditmuj.club}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-null}"
+    expose:
+      - "8000"
+    restart: unless-stopped
+    mem_limit: 6g
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ATTEND_API_HOST: ${ATTEND_API_HOST}
+    volumes:
+      - ./deploy/nginx/active.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/certbot/www:/var/www/certbot:ro
+      - ./deploy/certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./deploy/certbot/www:/var/www/certbot
+      - ./deploy/certbot/conf:/etc/letsencrypt
+    profiles:
+      - cert

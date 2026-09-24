@@ -1,116 +1,92 @@
-# Attend – Deployment Guide
+# Attend – Production deployment
 
-## Backend (AWS EC2)
+Hosting: a VPS (DigitalOcean / Hetzner / Lightsail) + Docker + nginx + Let’s Encrypt.
+Phones and the Windows admin app talk to **`https://api.builditmuj.club`**. Supabase stays in the cloud.
 
-### Prerequisites
+DNS for **builditmuj.club**: [BUY_AND_DNS.md](BUY_AND_DNS.md).
 
-- AWS account
-- Supabase project (URL + service key)
-- JWT secret for token signing
+## Backend (production)
 
-### 1. EC2 Setup
-
-1. Launch an EC2 instance (Ubuntu 22.04 LTS recommended).
-2. For CPU-only: `t3.medium` or similar.
-3. For GPU (face recognition): choose an instance with NVIDIA GPU (e.g. `g4dn.xlarge`), install NVIDIA drivers and `nvidia-container-toolkit` if using Docker with GPU.
-
-### 2. Docker Deployment (CPU)
+On the VPS, as root (or a docker-capable user):
 
 ```bash
-# Clone repo
-git clone <repo-url> Attend && cd Attend
+git clone <repo-url> /opt/attend && cd /opt/attend
 
-# Create .env from template
+cp deploy/attend.env.example deploy/attend.env
+# ATTEND_API_HOST=api.builditmuj.club (already in the example)
+# CERTBOT_EMAIL=an inbox you can read
+
 cp apps/backend/.env.example apps/backend/.env
-# Edit apps/backend/.env with your Supabase URL, service key, JWT secret
+# fill SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET (same as local)
+# APP_BASE_URL=https://api.builditmuj.club
+# FACE_EXECUTION_PROVIDER=cpu
+# DEBUG=false
+# CORS_ORIGINS=null
+# RESEND_FROM_EMAIL="Attend <noreply@buildit.club>"
 
-# Run with Docker Compose
-docker compose up -d backend
+chmod +x scripts/vps-up.sh scripts/vps-issue-cert.sh scripts/verify-production.sh
+
+./scripts/vps-up.sh
+./scripts/vps-issue-cert.sh
+./scripts/verify-production.sh https://api.builditmuj.club
 ```
 
-Backend will be available at `http://<ec2-ip>:8000`. Use a reverse proxy (nginx) and HTTPS in production.
+**Gate (phone, Wi-Fi off / cellular):**
 
-### 3. Docker Deployment (GPU)
+1. `https://api.builditmuj.club/health` → `{"status":"ok"}`
+2. `https://api.builditmuj.club/docs` loads
+3. Login with an existing teacher
+4. One enroll or recognize photo
 
-For GPU instances:
+Do not build the Android APK until this gate passes.
+
+nginx allows 25 MB uploads and 120 s proxy timeouts. Port 8000 is not published; only 80/443.
+
+Renew certificates (cron monthly):
 
 ```bash
-# Build GPU image
-docker build -f apps/backend/Dockerfile.gpu -t attend-backend-gpu ./apps/backend
-
-# Run (requires nvidia-docker)
-docker run -d -p 8000:8000 \
-  -e SUPABASE_URL=... \
-  -e SUPABASE_SERVICE_KEY=... \
-  -e JWT_SECRET=... \
-  -e FACE_EXECUTION_PROVIDER=cuda \
-  --gpus all \
-  attend-backend-gpu
+cd /opt/attend
+docker compose --env-file deploy/attend.env -f docker-compose.prod.yml run --rm certbot renew
+docker compose --env-file deploy/attend.env -f docker-compose.prod.yml exec nginx nginx -s reload
 ```
 
-### 4. Systemd Service (Optional)
+## GPU (optional later)
 
-Create `/etc/systemd/system/attend-backend.service`:
+If CPU recognition is too slow, use [apps/backend/Dockerfile.gpu](../apps/backend/Dockerfile.gpu) on a GPU VPS with `FACE_EXECUTION_PROVIDER=cuda`.
 
-```ini
-[Unit]
-Description=Attend Backend API
-After=network.target
+## Mobile (Android APK, no Play Store)
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/Attend
-ExecStart=/usr/bin/docker compose up
-ExecStop=/usr/bin/docker compose down
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then: `sudo systemctl enable attend-backend && sudo systemctl start attend-backend`
-
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| SUPABASE_URL | Yes | Supabase project URL |
-| SUPABASE_SERVICE_KEY | Yes | Supabase service role key |
-| JWT_SECRET | Yes | Secret for JWT signing |
-| RECOGNITION_THRESHOLD | No | Face match threshold (default: 0.5) |
-| FACE_EXECUTION_PROVIDER | No | `auto`, `cuda`, `coreml`, or `cpu` (default: auto) |
-
----
-
-## Mobile (Android APK)
-
-### EAS Build (Expo Application Services)
-
-1. Install EAS CLI: `npm install -g eas-cli`
-2. Login: `eas login`
-3. Configure: `cd apps/mobile && eas build:configure`
-4. Build APK: `eas build --platform android --profile preview`
-
-Or use local build:
+See [install-android.md](install-android.md). `eas.json` already points at `https://api.builditmuj.club`.
 
 ```bash
 cd apps/mobile
-npx expo prebuild
-npx expo run:android
+eas login
+eas build --platform android --profile preview
 ```
 
-APK output: `android/app/build/outputs/apk/` (or EAS build artifacts).
+## iOS (TestFlight)
 
----
+See [install-ios.md](install-ios.md). Requires Apple Developer Program.
 
-## Admin Desktop (Windows Installer)
+## Student registration site
+
+1. Apply `apps/backend/migrations/004_student_roster_enrollment.sql` in the Supabase SQL Editor.
+2. Set `STUDENT_WEB_URL=https://register.builditmuj.club` on the API.
+3. Build and copy the static app:
+
+```bash
+npm run build --workspace=student-web
+# copy apps/student-web/dist to /var/www/student-web
+```
+
+4. Use [deploy/nginx/student-web.conf](../deploy/nginx/student-web.conf) and add the origin to `CORS_ORIGINS`.
+
+## Admin desktop (Windows)
+
+See [install-desktop.md](install-desktop.md).
 
 ```bash
 cd apps/admin-desktop
-npm run build:electron
+cp .env.production.example .env.production
+npm run build:electron:prod:win
 ```
-
-Output: `release/` directory with Windows NSIS installer.
-
-Build targets are configured in `package.json` (`"win": { "target": "nsis" }`).

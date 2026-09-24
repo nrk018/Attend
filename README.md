@@ -202,10 +202,12 @@ Docs: `http://localhost:8000/docs` when backend is running.
 
 ## Deployment
 
-- **Backend:** Docker + AWS EC2 (see `apps/backend/Dockerfile`, `docker-compose.yml`)
-- **Database:** Supabase (managed PostgreSQL)
-- **Mobile:** EAS Build for APK (`eas build --platform android`)
-- **Desktop:** `npm run build:electron` in admin-desktop for Windows installer
+- **Buy domain + VPS:** [docs/BUY_AND_DNS.md](docs/BUY_AND_DNS.md)
+- **Backend:** Docker + nginx + Let’s Encrypt on the VPS — [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- **Database:** Supabase (already cloud)
+- **Android APK (no Play Store):** [docs/install-android.md](docs/install-android.md)
+- **iOS TestFlight:** [docs/install-ios.md](docs/install-ios.md)
+- **Windows admin:** [docs/install-desktop.md](docs/install-desktop.md)
 
 ---
 

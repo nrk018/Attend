@@ -1,11 +1,19 @@
 # Dependencies
 node_modules/
 
-# Environment
+# Local env files
 .env
 .env.local
 .env.*.local
 *.env
+!.env.example
+!*.env.example
+deploy/attend.env
+apps/admin-desktop/.env.production
+
+# Let's Encrypt material and generated nginx template
+deploy/certbot/
+deploy/nginx/active.conf.template
 
 # Build outputs
 dist/
