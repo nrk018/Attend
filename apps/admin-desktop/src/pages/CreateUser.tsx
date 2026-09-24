@@ -20,7 +20,7 @@ export default function CreateUser() {
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN';
-  const targetRole: CreateableRole = isSuperAdmin ? 'DEPARTMENT_ADMIN' : 'TEACHER';
+  const roleToCreate: CreateableRole = isDeptAdmin ? 'TEACHER' : 'DEPARTMENT_ADMIN';
   const effectiveDeptId = isDeptAdmin ? (user?.department_id ?? '') : departmentId;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +29,7 @@ export default function CreateUser() {
     const parseResult = createUserSchema.safeParse({
       email,
       password,
-      role: targetRole,
+      role: roleToCreate,
       college_id: collegeId ?? null,
       department_id: effectiveDeptId || null,
     });
@@ -45,7 +45,7 @@ export default function CreateUser() {
       await createUser.mutateAsync({
         email,
         password,
-        role: targetRole,
+        role: roleToCreate,
         college_id: collegeId!,
         department_id: effectiveDeptId,
       });
@@ -60,13 +60,16 @@ export default function CreateUser() {
 
   return (
     <>
-      <h1>Create {targetRole.replace('_', ' ')}</h1>
+      <h1>Create {roleToCreate.replace('_', ' ')}</h1>
       <p style={styles.subtitle}>
         {isSuperAdmin
-          ? 'Assign a Department Admin to manage a department'
+          ? 'Create a Department Admin and assign them to a department'
           : 'Assign a Teacher to take attendance'}
       </p>
       <form onSubmit={handleSubmit} style={styles.form}>
+        {isSuperAdmin && (
+          <p style={styles.subtitle}>Role: Department Admin</p>
+        )}
         <input
           type="email"
           placeholder="Email"
@@ -113,7 +116,7 @@ export default function CreateUser() {
         )}
         {error && <p style={styles.error}>{error}</p>}
         <button type="submit" style={styles.button} disabled={createUser.isPending}>
-          {createUser.isPending ? 'Creating...' : `Create ${targetRole.replace('_', ' ')}`}
+          {createUser.isPending ? 'Creating...' : `Create ${roleToCreate.replace('_', ' ')}`}
         </button>
       </form>
       <Link to={`/colleges/${collegeId}/users`} style={styles.backLink}>

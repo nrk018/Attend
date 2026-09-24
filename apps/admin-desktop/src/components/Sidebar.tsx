@@ -12,7 +12,20 @@ export function Layout() {
         <nav style={styles.nav}>
           <Link to="/" style={styles.navLink}>Dashboard</Link>
           {(user?.role === 'PLATFORM_ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <Link to="/approvals" style={styles.navLink}>Approvals</Link>
+          )}
+          {user?.role === 'PLATFORM_ADMIN' && (
             <Link to="/colleges" style={styles.navLink}>Colleges</Link>
+          )}
+          {user?.role === 'SUPER_ADMIN' && user?.college_id && (
+            <>
+              <Link to={`/colleges/${user.college_id}/users`} style={styles.navLink}>Users</Link>
+              <Link to={`/colleges/${user.college_id}/departments`} style={styles.navLink}>Departments</Link>
+              <Link to={`/colleges/${user.college_id}/students`} style={styles.navLink}>Students</Link>
+            </>
+          )}
+          {user?.role === 'DEPARTMENT_ADMIN' && user?.college_id && (
+            <Link to={`/colleges/${user.college_id}/users`} style={styles.navLink}>Teachers</Link>
           )}
         </nav>
         <button onClick={logout} style={styles.logout}>Sign Out</button>

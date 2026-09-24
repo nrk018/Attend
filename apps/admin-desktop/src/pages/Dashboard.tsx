@@ -37,21 +37,25 @@ export default function Dashboard() {
               </div>
             )}
             <div style={styles.actions}>
-              <Link to="/colleges/new" style={styles.primaryButton}>Create College</Link>
+              <Link to="/approvals" style={styles.primaryButton}>Approvals</Link>
+              <Link to="/colleges/new" style={styles.secondaryButton}>Create College</Link>
               <Link to="/colleges" style={styles.secondaryButton}>View Colleges</Link>
             </div>
           </>
         )}
         {user?.role === 'SUPER_ADMIN' && user?.college_id && (
           <div style={styles.actions}>
-            <Link to={`/colleges/${user.college_id}/departments`} style={styles.primaryButton}>
+            <Link to="/approvals" style={styles.primaryButton}>
+              Approvals
+            </Link>
+            <Link to={`/colleges/${user.college_id}/departments`} style={styles.secondaryButton}>
               Manage Departments
             </Link>
             <Link to={`/colleges/${user.college_id}/users`} style={styles.secondaryButton}>
               Manage Users
             </Link>
             <Link to={`/colleges/${user.college_id}/students`} style={styles.secondaryButton}>
-              View Students
+              Student roster
             </Link>
           </div>
         )}
@@ -70,7 +74,7 @@ export default function Dashboard() {
         )}
         {user?.role === 'TEACHER' && (
           <p style={styles.teacherNote}>
-            Teachers use the mobile app for enrollment, attendance, and reports.
+            Teachers use the mobile app for attendance and reports.
           </p>
         )}
     </>

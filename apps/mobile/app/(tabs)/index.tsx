@@ -52,30 +52,35 @@ export default function DashboardScreen() {
   const isTeacher =
     String(displayUser?.role ?? '').toUpperCase() === 'TEACHER';
 
-  const quickActions: QuickAction[] = [
-    {
+  const quickActions: QuickAction[] = [];
+  if (isTeacher) {
+    quickActions.push({
       icon: 'camera',
       title: 'Take Attendance',
       subtitle: 'Start a new session',
       route: '/(tabs)/attendance',
       highlight: true,
       variant: 'primary',
-    },
-    {
+    });
+  }
+  if (isDeptAdmin) {
+    quickActions.push({
       icon: 'person-add',
-      title: 'Enroll Student',
-      subtitle: 'Add new student',
+      title: 'Enroll faces',
+      subtitle: 'Capture faces for rostered students',
       route: '/(tabs)/enroll',
-    },
-    {
+    });
+  }
+  if (isTeacher || isDeptAdmin) {
+    quickActions.push({
       icon: 'bar-chart',
       title: 'View Reports',
       subtitle: 'Check attendance data',
       route: '/(tabs)/reports',
-    },
-  ];
+    });
+  }
 
-  const canViewDepartmentHub = isSuperAdmin || isDeptAdmin;
+  const canViewDepartmentHub = isDeptAdmin;
   const adminActions: QuickAction[] = [];
   if (canViewDepartmentHub) {
     adminActions.push({
@@ -99,7 +104,7 @@ export default function DashboardScreen() {
     adminActions.push({
       icon: 'people-outline',
       title: 'Section Students',
-      subtitle: 'Manage students in your sections',
+      subtitle: 'View students in your sections',
       route: '/(tabs)/section-students',
       variant: 'info',
     });

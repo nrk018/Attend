@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useUsers, useDeleteUser } from '../lib/queries';
+import { useUsers, useDeleteUser, useApproveUser, useDepartments } from '../lib/queries';
 import { useAuthStore } from '../store/auth';
 import { api } from '../lib/api';
 import { ENDPOINTS } from '@attend/shared';
@@ -9,15 +9,32 @@ export default function Users() {
   const { collegeId } = useParams();
   const { user } = useAuthStore();
   const { data: users = [], isLoading } = useUsers(collegeId ?? null);
+  const { data: departments = [] } = useDepartments(collegeId ?? null);
+
+  const departmentLabel = (u: { role: string; department_id?: string | null; department_name?: string | null }) => {
+    if (u.role !== 'DEPARTMENT_ADMIN') return '—';
+    return (
+      u.department_name
+      || departments.find((d: { id: string; name: string }) => d.id === u.department_id)?.name
+      || '—'
+    );
+  };
   const deleteUser = useDeleteUser(collegeId ?? null);
+  const approveUser = useApproveUser(collegeId ?? null);
   const canCreateUser = user?.role === 'SUPER_ADMIN' || user?.role === 'DEPARTMENT_ADMIN';
+  const canApproveRole = (targetRole: string) => {
+    if (user?.role === 'PLATFORM_ADMIN') return targetRole === 'SUPER_ADMIN';
+    if (user?.role === 'SUPER_ADMIN') return targetRole === 'DEPARTMENT_ADMIN';
+    return false;
+  };
   const [confirmUser, setConfirmUser] = useState<{ email: string } | null>(null);
+  const [approveUserState, setApproveUserState] = useState<{ id: string; email: string; role: string } | null>(null);
   const [deleteUserState, setDeleteUserState] = useState<{ id: string; email: string; role: string } | null>(null);
   const [sending, setSending] = useState(false);
 
   const canDelete = (targetRole: string) => {
     if (user?.role === 'PLATFORM_ADMIN') return targetRole === 'SUPER_ADMIN';
-    if (user?.role === 'SUPER_ADMIN') return targetRole === 'DEPARTMENT_ADMIN' || targetRole === 'TEACHER';
+    if (user?.role === 'SUPER_ADMIN') return targetRole === 'DEPARTMENT_ADMIN';
     if (user?.role === 'DEPARTMENT_ADMIN') return targetRole === 'TEACHER';
     return false;
   };
@@ -71,17 +88,30 @@ export default function Users() {
             <th>Contact</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Department</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {users.map((u: { id: string; email: string; role: string; name?: string; contact_number?: string }) => (
+          {users.map((u: { id: string; email: string; role: string; name?: string; contact_number?: string; email_verified?: boolean; department_id?: string | null; department_name?: string | null }) => (
             <tr key={u.id}>
               <td>{u.name || '—'}</td>
               <td>{u.contact_number || '—'}</td>
               <td>{u.email}</td>
               <td>{u.role}</td>
+              <td>{departmentLabel(u)}</td>
+              <td>{u.email_verified ? 'Approved' : 'Pending'}</td>
               <td style={styles.actionsCell}>
+                {!u.email_verified && canApproveRole(u.role) && (
+                  <button
+                    type="button"
+                    style={styles.approveBtn}
+                    onClick={() => setApproveUserState({ id: u.id, email: u.email, role: u.role })}
+                  >
+                    Approve
+                  </button>
+                )}
                 <button
                   type="button"
                   style={styles.resendBtn}
@@ -127,6 +157,42 @@ export default function Users() {
                 disabled={sending}
               >
                 {sending ? 'Sending...' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {approveUserState && (
+        <div style={styles.overlay}>
+          <div style={styles.confirmCard}>
+            <h3 style={styles.confirmTitle}>Approve this account?</h3>
+            <p style={styles.confirmText}>
+              <strong>{approveUserState.email}</strong> will be able to sign in immediately (no email link required).
+            </p>
+            <div style={styles.confirmActions}>
+              <button
+                type="button"
+                style={styles.cancelBtn}
+                onClick={() => setApproveUserState(null)}
+                disabled={approveUser.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={styles.approveConfirmBtn}
+                onClick={async () => {
+                  try {
+                    await approveUser.mutateAsync(approveUserState.id);
+                    setApproveUserState(null);
+                  } catch (e: any) {
+                    alert(e?.response?.data?.detail ?? 'Failed to approve user.');
+                  }
+                }}
+                disabled={approveUser.isPending}
+              >
+                {approveUser.isPending ? 'Approving...' : 'Approve'}
               </button>
             </div>
           </div>
@@ -185,6 +251,25 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     cursor: 'pointer',
     fontSize: 13,
+  },
+  approveBtn: {
+    padding: '6px 12px',
+    background: '#00C853',
+    border: 'none',
+    color: '#000',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  approveConfirmBtn: {
+    padding: '10px 20px',
+    background: '#00C853',
+    border: 'none',
+    color: '#000',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontWeight: 600,
   },
   overlay: {
     position: 'fixed',

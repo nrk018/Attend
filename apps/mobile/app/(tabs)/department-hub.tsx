@@ -18,7 +18,7 @@ export default function DepartmentHubScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'PLATFORM_ADMIN';
+  const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN';
 
   const rosterActions: HubAction[] = [];
   rosterActions.push(

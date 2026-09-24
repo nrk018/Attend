@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from app.auth.deps import get_current_user, require_platform_admin, require_super_admin
+from app.auth.deps import get_current_user, require_platform_admin, require_roles
 from app.db.supabase import get_supabase
 from pydantic import BaseModel
 
@@ -33,7 +33,7 @@ class CollegeResponse(BaseModel):
 @router.post("/upload-logo")
 def upload_logo(
     file: UploadFile = File(...),
-    user: dict = Depends(require_super_admin),
+    user: dict = Depends(require_roles("PLATFORM_ADMIN", "SUPER_ADMIN")),
 ):
     """Upload a college logo image. Returns the public URL."""
     if file.content_type not in ALLOWED_LOGO_TYPES:
@@ -80,11 +80,15 @@ def create_college(
 
 
 @router.get("", response_model=List[CollegeResponse])
-def list_colleges(user: dict = Depends(require_super_admin)):
+def list_colleges(user: dict = Depends(require_roles("PLATFORM_ADMIN", "SUPER_ADMIN"))):
+    """Platform Admin sees all colleges. Super Admin sees only their own college."""
     supabase = get_supabase()
     q = supabase.table("colleges").select("*").order("created_at", desc=True)
-    if user.get("role") == "SUPER_ADMIN" and user.get("college_id"):
-        q = q.eq("id", user["college_id"])
+    if user.get("role") == "SUPER_ADMIN":
+        college_id = user.get("college_id")
+        if not college_id:
+            return []
+        q = q.eq("id", college_id)
     result = q.execute()
     return [
         CollegeResponse(

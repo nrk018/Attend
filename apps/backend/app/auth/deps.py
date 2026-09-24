@@ -42,13 +42,23 @@ def require_platform_admin(user: dict = Depends(require_roles("PLATFORM_ADMIN"))
     return user
 
 
-def require_super_admin(user: dict = Depends(require_roles("PLATFORM_ADMIN", "SUPER_ADMIN"))):
+def require_super_admin(user: dict = Depends(require_roles("SUPER_ADMIN"))):
     return user
 
 
-def require_dept_admin(user: dict = Depends(require_roles("PLATFORM_ADMIN", "SUPER_ADMIN", "DEPARTMENT_ADMIN"))):
+def require_dept_admin(user: dict = Depends(require_roles("DEPARTMENT_ADMIN"))):
     return user
 
 
-def require_teacher(user: dict = Depends(require_roles("PLATFORM_ADMIN", "SUPER_ADMIN", "DEPARTMENT_ADMIN", "TEACHER"))):
+def require_teacher(user: dict = Depends(require_roles("TEACHER"))):
+    return user
+
+
+def require_college_staff(
+    user: dict = Depends(require_roles("SUPER_ADMIN", "DEPARTMENT_ADMIN", "TEACHER")),
+):
+    return user
+
+
+def require_class_staff(user: dict = Depends(require_roles("DEPARTMENT_ADMIN", "TEACHER"))):
     return user

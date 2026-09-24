@@ -7,6 +7,9 @@ import {
   View,
   Text,
   ActivityIndicator,
+  Modal,
+  FlatList,
+  Pressable,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,8 +17,9 @@ import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { ENDPOINTS } from '@attend/shared';
 import { userSchema } from '@attend/shared';
+import { useDepartments } from '@/lib/queries';
 import { GlassCard, GlassButton, GlassInput, IconBadge } from '@/components/ui';
-import { useThemeColors, colors as staticColors, spacing, typography } from '@/theme';
+import { useThemeColors, colors as staticColors, spacing, typography, borderRadius } from '@/theme';
 
 export default function CreateTeacherScreen() {
   const router = useRouter();
@@ -24,6 +28,8 @@ export default function CreateTeacherScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
+  const [deptModalOpen, setDeptModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
@@ -52,9 +58,13 @@ export default function CreateTeacherScreen() {
   }, [token]);
 
   const collegeId = user?.college_id ?? '';
-  const departmentId = user?.department_id ?? '';
   const userRole = String(user?.role ?? '').toUpperCase();
-  const canAddTeacher = userRole === 'DEPARTMENT_ADMIN' || userRole === 'SUPER_ADMIN';
+  const isSuperAdmin = false;
+  const canAddTeacher = userRole === 'DEPARTMENT_ADMIN';
+  const { data: departments = [] } = useDepartments(isSuperAdmin ? collegeId || null : null);
+  const resolvedDepartmentId =
+    userRole === 'DEPARTMENT_ADMIN' ? (user?.department_id ?? '') : selectedDepartmentId;
+  const selectedDept = departments.find((d: { id: string }) => d.id === selectedDepartmentId);
 
   const handleSubmit = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -70,10 +80,12 @@ export default function CreateTeacherScreen() {
       );
       return;
     }
-    if (!departmentId) {
+    if (!resolvedDepartmentId) {
       Alert.alert(
         'Validation Error',
-        'You must be assigned to a department to add teachers.'
+        isSuperAdmin
+          ? 'Select a department for this teacher.'
+          : 'You must be assigned to a department to add teachers.'
       );
       return;
     }
@@ -84,7 +96,7 @@ export default function CreateTeacherScreen() {
         password,
         role: 'TEACHER',
         college_id: collegeId,
-        department_id: departmentId,
+        department_id: resolvedDepartmentId,
         name: trimmedName || undefined,
       });
       Alert.alert(
@@ -116,7 +128,7 @@ export default function CreateTeacherScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <GlassCard>
           <Text style={[styles.restrictedText, { color: colors.textSecondary }]}>
-            Only Department Admin can add teachers.
+            Only Department Admins can add teachers.
           </Text>
         </GlassCard>
       </View>
@@ -140,7 +152,9 @@ export default function CreateTeacherScreen() {
         </IconBadge>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Add Teacher</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Assign a Teacher to take attendance in your department
+          {isSuperAdmin
+            ? 'Pick a department and create a teacher account'
+            : 'Assign a Teacher to take attendance in your department'}
         </Text>
       </View>
 
@@ -183,6 +197,20 @@ export default function CreateTeacherScreen() {
             />
           }
         />
+        {isSuperAdmin && (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Department</Text>
+            <TouchableOpacity
+              style={[styles.select, { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass }]}
+              onPress={() => setDeptModalOpen(true)}
+            >
+              <Text style={[styles.selectText, { color: colors.textPrimary }]}>
+                {selectedDept?.name ?? 'Select department'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          </>
+        )}
       </GlassCard>
 
       <GlassButton
@@ -197,6 +225,37 @@ export default function CreateTeacherScreen() {
       >
         Add Teacher
       </GlassButton>
+
+      {isSuperAdmin && (
+        <Modal visible={deptModalOpen} transparent animationType="slide">
+          <Pressable
+            style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
+            onPress={() => setDeptModalOpen(false)}
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Select Department</Text>
+              <FlatList
+                data={departments}
+                keyExtractor={(d: { id: string }) => d.id}
+                renderItem={({ item }: { item: { id: string; name: string } }) => (
+                  <TouchableOpacity
+                    style={[styles.modalItem, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      setSelectedDepartmentId(item.id);
+                      setDeptModalOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.modalItemText, { color: colors.textPrimary }]}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <GlassButton variant="ghost" size="md" onPress={() => setDeptModalOpen(false)}>
+                Cancel
+              </GlassButton>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </ScrollView>
   );
 }
@@ -244,9 +303,45 @@ const styles = StyleSheet.create({
   formCard: {
     marginBottom: spacing.xl,
   },
+  label: {
+    ...typography.label,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
+  select: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
+  selectText: {
+    ...typography.body,
+  },
   restrictedText: {
     ...typography.body,
-    color: staticColors.textSecondary,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    ...typography.h3,
+    marginBottom: spacing.lg,
+  },
+  modalItem: {
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+  },
+  modalItemText: {
+    ...typography.body,
   },
 });

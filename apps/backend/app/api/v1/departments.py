@@ -41,6 +41,8 @@ def list_departments(
 ):
     supabase = get_supabase()
     role = user.get("role")
+    if role == "PLATFORM_ADMIN":
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     if role in ("SUPER_ADMIN", "DEPARTMENT_ADMIN", "TEACHER"):
         if str(user.get("college_id")) != college_id:
             raise HTTPException(status_code=403, detail="Cannot access another college")
