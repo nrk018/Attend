@@ -75,7 +75,13 @@ def get_or_build_college_index(supabase, college_id: str) -> Tuple[Optional[fais
             return _index_cache[college_id]
 
         # Load students for this college, then their embeddings
-        students_result = supabase.table("students").select("id").eq("college_id", college_id).execute()
+        students_result = (
+            supabase.table("students")
+            .select("id")
+            .eq("college_id", college_id)
+            .eq("enrollment_status", "enrolled")
+            .execute()
+        )
         if not students_result.data:
             _index_cache[college_id] = (None, [])
             return None, []

@@ -95,6 +95,8 @@ export const assignStudentsSchema = z.object({
 export const createStudentSchema = z.object({
   reg_no: z.string().min(1, 'Registration number is required'),
   name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Valid email is required'),
+  phone: z.string().min(8, 'Phone number is required'),
   college_id: z.string().min(1, 'College is required'),
   department_id: z.string().min(1, 'Department is required'),
 });
@@ -103,10 +105,15 @@ export const studentSchema = z.object({
   id: z.string(),
   reg_no: z.string(),
   name: z.string(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
   college_id: z.string(),
   department_id: z.string(),
-  primary_image_url: z.string().nullable(),
-  created_at: z.string(),
+  enrollment_status: z.string().nullable().optional(),
+  email_verified: z.boolean().optional(),
+  primary_image_url: z.string().nullable().optional(),
+  id_card_url: z.string().nullable().optional(),
+  created_at: z.string().optional(),
 });
 
 // User creation
@@ -125,12 +132,26 @@ export const attendanceRecordSchema = z.object({
   student_id: z.string(),
   subject_id: z.string(),
   section_id: z.string().optional().nullable(),
+  class_id: z.string().optional().nullable(),
   confidence: z.number(),
   face_crop_base64: z.string().optional().nullable(),
+  source: z.enum(['face', 'manual']).optional().nullable(),
 });
 
 export const confirmAttendanceSchema = z.object({
   records: z.array(attendanceRecordSchema),
+});
+
+export const attendanceClassSchema = z.object({
+  id: z.string(),
+  subject_id: z.string(),
+  section_id: z.string().nullable().optional(),
+  class_date: z.string(),
+  name: z.string(),
+  present_count: z.number().optional(),
+  section_name: z.string().nullable().optional(),
+  subject_name: z.string().nullable().optional(),
+  created_at: z.string().optional(),
 });
 
 // Inferred types
@@ -143,3 +164,4 @@ export type Subject = z.infer<typeof subjectSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type Student = z.infer<typeof studentSchema>;
 export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
+export type AttendanceClass = z.infer<typeof attendanceClassSchema>;

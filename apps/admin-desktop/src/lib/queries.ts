@@ -66,14 +66,23 @@ export function useUsers(collegeId: string | null) {
   });
 }
 
-export function useStudents(collegeId: string | null) {
+export function useStudents(
+  collegeId: string | null,
+  departmentId: string | null = null,
+  enabled = true,
+  includePhotos = true
+) {
   return useQuery({
-    queryKey: ['students', collegeId],
+    queryKey: ['students', collegeId, departmentId, includePhotos],
     queryFn: async () => {
-      const { data } = await api.get(`/api/v1/students?college_id=${collegeId}`);
+      const params = new URLSearchParams();
+      if (collegeId) params.set('college_id', collegeId);
+      if (departmentId) params.set('department_id', departmentId);
+      if (!includePhotos) params.set('include_photos', 'false');
+      const { data } = await api.get(`/api/v1/students?${params.toString()}`);
       return data ?? [];
     },
-    enabled: !!collegeId,
+    enabled: (!!collegeId || !!departmentId) && enabled,
   });
 }
 
@@ -209,6 +218,81 @@ export function useDeleteSubject(departmentId: string) {
   });
 }
 
+export function useSubject(subjectId: string | null) {
+  return useQuery({
+    queryKey: ['subject', subjectId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.subjectById(subjectId!));
+      return data as { id: string; name: string; department_id: string };
+    },
+    enabled: !!subjectId,
+  });
+}
+
+export function useSubjectSections(subjectId: string | null) {
+  return useQuery({
+    queryKey: ['sections', subjectId],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.subjectSections(subjectId!));
+      return data ?? [];
+    },
+    enabled: !!subjectId,
+  });
+}
+
+export function useSubjectStudents(subjectId: string | null) {
+  return useQuery({
+    queryKey: ['subject-students', subjectId],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/subjects/${subjectId}/students`);
+      return data ?? [];
+    },
+    enabled: !!subjectId,
+  });
+}
+
+export function useAssignStudentsToSection(subjectId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, studentIds }: { sectionId: string; studentIds: string[] }) => {
+      const { data } = await api.post(ENDPOINTS.sectionStudents(sectionId), { student_ids: studentIds });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subject-students', subjectId] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+  });
+}
+
+export function useRemoveStudentFromSection(subjectId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ sectionId, studentId }: { sectionId: string; studentId: string }) => {
+      const { data } = await api.post(`/api/v1/sections/${sectionId}/students/${studentId}/remove`);
+      return data;
+    },
+    onMutate: async ({ sectionId, studentId }) => {
+      const key = ['subject-students', subjectId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (old: Array<{ id: string; section_id?: string | null }> = []) =>
+        old.filter((s) => !(s.id === studentId && s.section_id === sectionId))
+      );
+      return { previous, key };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous !== undefined) {
+        queryClient.setQueryData(ctx.key, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['subject-students', subjectId] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+  });
+}
+
 export function useCreateUser(collegeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -226,6 +310,93 @@ export function useDeleteUser(collegeId: string | null) {
     mutationFn: (userId: string) => api.delete(ENDPOINTS.userById(userId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users', collegeId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'pending'] });
+    },
+  });
+}
+
+export function usePendingUsers(enabled = true) {
+  return useQuery({
+    queryKey: ['users', 'pending'],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.USERS_PENDING);
+      return data ?? [];
+    },
+    enabled,
+  });
+}
+
+export function usePendingStudentApprovals(enabled = true) {
+  return useQuery({
+    queryKey: ['students', 'pending-approval'],
+    queryFn: async () => {
+      const { data } = await api.get(ENDPOINTS.STUDENTS_PENDING_APPROVAL);
+      return data ?? [];
+    },
+    enabled,
+    staleTime: 20_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useApproveStudentEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (studentId: string) => {
+      const { data } = await api.post(ENDPOINTS.studentApproveEnrollment(studentId));
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', 'pending-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+  });
+}
+
+export function useDenyStudentEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (studentId: string) => {
+      const { data } = await api.post(ENDPOINTS.studentDenyEnrollment(studentId));
+      return data;
+    },
+    onSuccess: (_data, studentId) => {
+      queryClient.setQueryData(['students', 'pending-approval'], (current: unknown) =>
+        Array.isArray(current) ? current.filter((s: { id?: string }) => s?.id !== studentId) : []
+      );
+      queryClient.invalidateQueries({ queryKey: ['students', 'pending-approval'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+  });
+}
+
+export function useApproveUser(collegeId: string | null = null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data } = await api.post(ENDPOINTS.userApprove(userId));
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', collegeId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'pending'] });
+    },
+  });
+}
+
+export function useCreateStudent(collegeId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      reg_no: string;
+      name: string;
+      email: string;
+      phone: string;
+      department_id: string;
+      college_id: string;
+    }) => api.post(ENDPOINTS.STUDENTS, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', collegeId] });
     },
   });
 }
@@ -233,8 +404,21 @@ export function useDeleteUser(collegeId: string | null) {
 export function useUpdateStudent(collegeId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ studentId, reg_no, name, department_id }: { studentId: string; reg_no?: string; name?: string; department_id?: string }) =>
-      api.patch(ENDPOINTS.studentById(studentId), { reg_no, name, department_id }),
+    mutationFn: ({
+      studentId,
+      reg_no,
+      name,
+      email,
+      phone,
+      department_id,
+    }: {
+      studentId: string;
+      reg_no?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      department_id?: string;
+    }) => api.patch(ENDPOINTS.studentById(studentId), { reg_no, name, email, phone, department_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', collegeId] });
     },

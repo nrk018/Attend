@@ -23,12 +23,17 @@ class Settings(BaseSettings):
 
     # Face recognition
     recognition_threshold: float = 0.5
+    auto_enroll_threshold: float = 0.5
     face_execution_provider: str = "auto"  # auto | cuda | coreml | cpu
 
     # Email (Resend)
     resend_api_key: str = ""
-    resend_from_email: str = "Attend <onboarding@resend.dev>"  # Use verified domain e.g. "Attend <noreply@yourdomain.com>"
-    app_base_url: str = "http://localhost:8000"  # For verification links
+    resend_from_email: str = "Attend <onboarding@resend.dev>"  # Production: "Attend <noreply@buildit.club>"
+    app_base_url: str = "http://localhost:8000"  # For staff verification links
+    student_web_url: str = "http://localhost:5174"  # Student registration portal
+
+    # Comma-separated extra CORS origins (Electron file:// sends Origin: null)
+    cors_origins: str = "null"
 
     class Config:
         env_file = ".env"

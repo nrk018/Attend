@@ -79,10 +79,33 @@ def crop_face(image: np.ndarray, bbox: List[float], padding: float = 0.1) -> np.
     return image[y1:y2, x1:x2]
 
 
+def _decode_with_pil(image_bytes: bytes):
+    try:
+        import io
+        from PIL import Image
+        try:
+            from pillow_heif import register_heif_opener
+            register_heif_opener()
+        except Exception:
+            pass
+        im = Image.open(io.BytesIO(image_bytes))
+        im = im.convert("RGB")
+        return cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
+    except Exception:
+        return None
+
+
 def decode_image(image_bytes: bytes) -> np.ndarray:
     """Decode image bytes to numpy BGR."""
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    path = "cv2"
     if img is None:
+        img = _decode_with_pil(image_bytes)
+        path = "pil"
+    if img is None:
+        raw = image_bytes[:16] if image_bytes else b""
+        if raw[4:8] == b"ftyp" or b"heic" in raw.lower() or b"heif" in raw.lower():
+            raise ValueError("This photo format is not supported. Upload a JPEG or PNG of the ID card.")
         raise ValueError("Invalid image")
     return img

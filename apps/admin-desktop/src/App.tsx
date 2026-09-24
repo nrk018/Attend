@@ -9,14 +9,37 @@ import EditCollege from './pages/EditCollege';
 import CreateSuperAdmin from './pages/CreateSuperAdmin';
 import Departments from './pages/Departments';
 import Users from './pages/Users';
+import Approvals from './pages/Approvals';
 import Students from './pages/Students';
 import Subjects from './pages/Subjects';
+import SubjectDetail from './pages/SubjectDetail';
 import CreateUser from './pages/CreateUser';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
   if (!token) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'PLATFORM_ADMIN') return <>{children}</>;
+  if (user?.role === 'SUPER_ADMIN' && user.college_id) {
+    return <Navigate to={`/colleges/${user.college_id}/users`} replace />;
+  }
+  return <Navigate to="/" replace />;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'SUPER_ADMIN') return <>{children}</>;
+  return <Navigate to="/" replace />;
+}
+
+function CollegeStaffRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'SUPER_ADMIN' || user?.role === 'DEPARTMENT_ADMIN') return <>{children}</>;
+  return <Navigate to="/" replace />;
 }
 
 export default function App() {
@@ -32,15 +55,50 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="/colleges" element={<Colleges />} />
-          <Route path="/colleges/new" element={<CreateCollege />} />
+          <Route path="/approvals" element={<Approvals />} />
+          <Route
+            path="/colleges"
+            element={
+              <PlatformAdminRoute>
+                <Colleges />
+              </PlatformAdminRoute>
+            }
+          />
+          <Route
+            path="/colleges/new"
+            element={
+              <PlatformAdminRoute>
+                <CreateCollege />
+              </PlatformAdminRoute>
+            }
+          />
           <Route path="/colleges/:collegeId/edit" element={<EditCollege />} />
-          <Route path="/colleges/:collegeId/super-admin" element={<CreateSuperAdmin />} />
-          <Route path="/colleges/:collegeId/departments" element={<Departments />} />
-          <Route path="/colleges/:collegeId/users" element={<Users />} />
-          <Route path="/colleges/:collegeId/users/new" element={<CreateUser />} />
-          <Route path="/colleges/:collegeId/students" element={<Students />} />
+          <Route
+            path="/colleges/:collegeId/super-admin"
+            element={
+              <PlatformAdminRoute>
+                <CreateSuperAdmin />
+              </PlatformAdminRoute>
+            }
+          />
+          <Route
+            path="/colleges/:collegeId/departments"
+            element={<SuperAdminRoute><Departments /></SuperAdminRoute>}
+          />
+          <Route
+            path="/colleges/:collegeId/users"
+            element={<CollegeStaffRoute><Users /></CollegeStaffRoute>}
+          />
+          <Route
+            path="/colleges/:collegeId/users/new"
+            element={<CollegeStaffRoute><CreateUser /></CollegeStaffRoute>}
+          />
+          <Route
+            path="/colleges/:collegeId/students"
+            element={<SuperAdminRoute><Students /></SuperAdminRoute>}
+          />
           <Route path="/colleges/:collegeId/departments/:departmentId/subjects" element={<Subjects />} />
+          <Route path="/colleges/:collegeId/departments/:departmentId/subjects/:subjectId" element={<SubjectDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from app.auth.deps import get_current_user
 from app.auth.jwt import verify_password, create_access_token
 from app.db.supabase import get_supabase
-from app.services.email import generate_verification_token, send_verification_email, verification_expires_at
+from app.services.email import generate_verification_token, parse_timestamptz, send_verification_email, verification_expires_at
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -182,10 +182,8 @@ def verify_email(token: str):
     user = result.data[0]
     expires = user.get("email_verification_expires_at")
     if expires:
-        exp_dt = datetime.fromisoformat(expires.replace("Z", "+00:00")) if isinstance(expires, str) else expires
-        if exp_dt.tzinfo is None:
-            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
-        if exp_dt < datetime.now(timezone.utc):
+        exp_dt = parse_timestamptz(expires)
+        if exp_dt and exp_dt < datetime.now(timezone.utc):
             return _verify_error_page("Link expired", "Please request a new verification email from the app.", 400)
     supabase.table("users").update({
         "email_verified": True,

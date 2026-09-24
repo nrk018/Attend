@@ -7,12 +7,11 @@ import {
   View,
   Text,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/lib/api';
+import { uploadForm } from '@/lib/api';
 import { ENDPOINTS } from '@attend/shared';
 import { GlassButton } from '@/components/ui';
 import { useThemeColors, colors as staticColors, spacing, typography, borderRadius } from '@/theme';
@@ -46,22 +45,16 @@ export default function EnrollCameraScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const rawParams = useLocalSearchParams<{
-    reg_no: string | string[];
+    student_id: string | string[];
     name: string | string[];
-    college_id: string | string[];
-    department_id: string | string[];
+    reg_no: string | string[];
   }>();
   const params = {
-    reg_no: Array.isArray(rawParams.reg_no)
-      ? rawParams.reg_no[0]
-      : rawParams.reg_no,
+    student_id: Array.isArray(rawParams.student_id)
+      ? rawParams.student_id[0]
+      : rawParams.student_id,
     name: Array.isArray(rawParams.name) ? rawParams.name[0] : rawParams.name,
-    college_id: Array.isArray(rawParams.college_id)
-      ? rawParams.college_id[0]
-      : rawParams.college_id,
-    department_id: Array.isArray(rawParams.department_id)
-      ? rawParams.department_id[0]
-      : rawParams.department_id,
+    reg_no: Array.isArray(rawParams.reg_no) ? rawParams.reg_no[0] : rawParams.reg_no,
   };
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -87,7 +80,7 @@ export default function EnrollCameraScreen() {
     if (!camera.current || capturing) return;
     setCapturing(true);
     try {
-      const photo = await camera.current.takePictureAsync({ quality: 1 });
+      const photo = await camera.current.takePictureAsync({ quality: 0.7 });
       if (!photo?.uri) throw new Error('No photo captured');
       const newPhotos = [...photos, { path: photo.uri }];
       setPhotos(newPhotos);
@@ -104,23 +97,14 @@ export default function EnrollCameraScreen() {
   };
 
   const submitEnrollment = async (photoPaths: { path: string }[]) => {
-    if (
-      photoPaths.length !== 3 ||
-      !params.reg_no ||
-      !params.name ||
-      !params.college_id ||
-      !params.department_id
-    ) {
-      Alert.alert('Error', 'Missing data. Please go back and try again.');
+    if (photoPaths.length !== 3 || !params.student_id) {
+      Alert.alert('Error', 'Missing student. Please go back and pick from the roster.');
       return;
     }
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('reg_no', params.reg_no);
-      formData.append('name', params.name);
-      formData.append('college_id', params.college_id);
-      formData.append('department_id', params.department_id);
+      formData.append('student_id', params.student_id);
       const toFile = (uri: string, name: string) => ({
         uri: uri.startsWith('file://')
           ? uri
@@ -143,19 +127,7 @@ export default function EnrollCameraScreen() {
         toFile(photoPaths[2].path, 'right.jpg') as unknown as Blob
       );
 
-      const token = require('@/store/auth').useAuthStore.getState().token;
-      const res = await fetch(`${api.defaults.baseURL}${ENDPOINTS.ENROLL_STUDENT}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-      if (!res.ok) {
-        let errData;
-        try { errData = await res.json(); } catch (e) {}
-        throw { response: { status: res.status, data: errData }, message: errData?.detail || 'Connection failed' };
-      }
+      await uploadForm(ENDPOINTS.ENROLL_STUDENT, formData);
       Alert.alert('Success', `${params.name} enrolled successfully.`, [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -173,10 +145,14 @@ export default function EnrollCameraScreen() {
           'Invalid images. Ensure face is clearly visible in all 3 photos.';
       } else if (
         ax?.message?.toLowerCase().includes('network') ||
+        (ax as { code?: string })?.code === 'ERR_NETWORK' ||
+        (ax as { code?: string })?.code === 'ECONNABORTED' ||
         !ax?.response
       ) {
         msg =
-          'Connection failed. Check that your phone and computer are on the same Wi‑Fi, the backend is running, and the IP in apps/mobile/lib/api.ts matches your computer.';
+          ax?.message && ax.message !== 'Network Error'
+            ? ax.message
+            : 'Could not reach the enrollment API. Login uses the same URL; if login works, retry enrollment.';
       }
       const isFaceError =
         msg.toLowerCase().includes('face') ||
@@ -206,7 +182,14 @@ export default function EnrollCameraScreen() {
   };
 
   if (!permission) {
-    return <View style={[styles.container, { backgroundColor: colors.background }]} />;
+    return (
+      <View style={[styles.permissionContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.permissionText, { marginTop: spacing.lg }]}>
+          Checking camera permission…
+        </Text>
+      </View>
+    );
   }
 
   if (!hasPermission) {
