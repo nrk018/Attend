@@ -39,9 +39,11 @@ export default function VerifyEmailScreen() {
           <Text style={styles.title}>Verify your email</Text>
 
           <Text style={styles.subtitle}>
-            We sent a verification link to{' '}
-            <Text style={styles.emailText}>{email || 'your email'}</Text>. Click
-            the link to verify your account, then sign in.
+            Your account is waiting to be activated. A Platform Admin or Super
+            Admin can approve you in the College Administration desktop app
+            (Approvals). You can also open the verification link sent to{' '}
+            <Text style={styles.emailText}>{email || 'your email'}</Text> in a
+            browser as http:// (not https), then sign in.
           </Text>
         </GlassCard>
 

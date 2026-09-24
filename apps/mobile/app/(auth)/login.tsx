@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api, API_BASE, ENDPOINTS } from '@/lib/api';
+import { api, getApiBase, ENDPOINTS } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { loginSchema, loginResponseSchema } from '@attend/shared';
 import { ScreenContainer } from '@/components/layout';
@@ -36,15 +36,15 @@ export default function LoginScreen() {
       const { data } = await api.get('/health', { timeout: 10000 });
       Alert.alert(
         'Connection OK',
-        `Backend at ${API_BASE} responded: ${JSON.stringify(data)}`
+        `Backend at ${getApiBase()} responded: ${JSON.stringify(data)}`
       );
     } catch (e: any) {
       const isTimeout = e?.code === 'ECONNABORTED' || e?.message?.toLowerCase().includes('timeout');
       const msg = e?.response
         ? `Server error: ${e.response.status}`
         : isTimeout
-          ? `Timed out. Using: ${API_BASE}\n\nStart backend (npm run dev), same WiFi. Or set EXPO_PUBLIC_API_URL in apps/mobile/.env`
-          : `Cannot reach: ${API_BASE}\n\n1) npm run dev (backend on :8000)\n2) Phone & computer on same WiFi\n3) Restart Expo: npx expo start --clear\n4) Or set EXPO_PUBLIC_API_URL in apps/mobile/.env`;
+          ? `Timed out. Using: ${getApiBase()}\n\nStart backend (npm run dev), same WiFi. Or set EXPO_PUBLIC_API_URL in apps/mobile/.env`
+          : `Cannot reach: ${getApiBase()}\n\n1) npm run dev (backend on :8000)\n2) Phone & computer on same WiFi\n3) Restart Expo: npx expo start --clear\n4) Or set EXPO_PUBLIC_API_URL in apps/mobile/.env`;
       Alert.alert('Connection Failed', msg);
     }
   };
@@ -80,8 +80,8 @@ export default function LoginScreen() {
           e?.code === 'ECONNABORTED' ||
           e?.message?.toLowerCase().includes('timeout');
         const msg = isTimeout
-          ? `Request timed out. Backend: ${API_BASE}\n\n1) npm run dev  2) Same WiFi  3) Tap "Test connection"`
-          : `Could not reach ${API_BASE}. Same WiFi? Run npm run dev. Try "Test connection".`;
+          ? `Request timed out. Backend: ${getApiBase()}\n\n1) npm run dev  2) Same WiFi  3) Tap "Test connection"`
+          : `Could not reach ${getApiBase()}. Same WiFi? Run npm run dev. Try "Test connection".`;
         Alert.alert('Connection Failed', msg);
       } else {
         Alert.alert(
@@ -173,6 +173,9 @@ export default function LoginScreen() {
             >
               Test connection
             </GlassButton>
+            <Text style={[styles.apiBaseText, { color: colors.textMuted }]}>
+              {getApiBase()}
+            </Text>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -213,5 +216,10 @@ const styles = StyleSheet.create({
   testConnectionText: {
     opacity: 0.5,
     fontSize: 14,
+  },
+  apiBaseText: {
+    ...typography.caption,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
 });

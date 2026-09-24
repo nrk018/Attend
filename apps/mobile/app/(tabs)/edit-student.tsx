@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -13,7 +12,7 @@ import {
   View,
   Text,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';

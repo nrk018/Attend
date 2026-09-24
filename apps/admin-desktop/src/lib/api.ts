@@ -2,12 +2,14 @@ import axios from 'axios';
 import { ENDPOINTS } from '@attend/shared';
 import { useAuthStore } from '../store/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '' : 'https://api.builditmuj.club');
 
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
+  timeout: 120000,
 });
 
 api.interceptors.request.use((config) => {
@@ -27,4 +29,4 @@ api.interceptors.response.use(
   }
 );
 
-export { ENDPOINTS };
+export { ENDPOINTS, API_BASE };

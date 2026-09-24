@@ -14,7 +14,7 @@ export default function SectionStudentsScreen() {
   const { user } = useAuthStore();
 
   const isTeacher = user?.role === 'TEACHER';
-  const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'PLATFORM_ADMIN';
+  const isDeptAdmin = user?.role === 'DEPARTMENT_ADMIN';
 
   const { data: mySections = [], isLoading: sectionsLoading } = useMySections();
   const subjects = (mySections as SubjectWithSections[]) || [];

@@ -81,6 +81,7 @@ const styles = StyleSheet.create({
   },
   blurView: {
     overflow: 'hidden',
+    width: '100%',
   },
   content: {
     padding: spacing.lg,

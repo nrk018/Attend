@@ -11,7 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/lib/api';
+import { uploadForm } from '@/lib/api';
 import { ENDPOINTS } from '@attend/shared';
 import { GlassButton } from '@/components/ui';
 import { useThemeColors, colors as staticColors, spacing, typography, borderRadius } from '@/theme';
@@ -60,7 +60,7 @@ export default function AddFaceCameraScreen() {
     if (!camera.current || capturing || uploading || !studentId) return;
     setCapturing(true);
     try {
-      const photo = await camera.current.takePictureAsync({ quality: 1 });
+      const photo = await camera.current.takePictureAsync({ quality: 0.7 });
       if (!photo?.uri) throw new Error('No photo captured');
 
       setCapturing(false);
@@ -87,18 +87,7 @@ export default function AddFaceCameraScreen() {
         formData.append('right', file);
       }
 
-      const res = await fetch(`${api.defaults.baseURL}${ENDPOINTS.addStudentFace(sid)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${require('@/store/auth').useAuthStore.getState().token}`,
-        },
-        body: formData,
-      });
-      if (!res.ok) {
-        let errData;
-        try { errData = await res.json(); } catch (e) {}
-        throw { response: { status: res.status, data: errData }, message: errData?.detail || 'Upload failed' };
-      }
+      await uploadForm(ENDPOINTS.addStudentFace(sid), formData);
 
       Alert.alert('Success', `${title} added successfully.`, [
         { text: 'OK', onPress: () => router.back() },
@@ -108,7 +97,7 @@ export default function AddFaceCameraScreen() {
       const isNetworkError = !err?.response || err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK' || String(err?.message ?? '').toLowerCase().includes('network');
       const msg = err?.response?.data?.detail ?? err?.message ?? 'Upload failed';
       const fullMsg = isNetworkError
-        ? `${msg}\n\nEnsure your phone and computer are on the same Wi‑Fi, the backend is running, and the IP in apps/mobile/lib/api.ts matches your computer.`
+        ? `${msg}\n\nLogin uses the same API URL. If login works, retry this upload.`
         : msg;
       Alert.alert('Failed', fullMsg);
     } finally {

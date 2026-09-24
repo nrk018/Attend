@@ -3,7 +3,7 @@ import { StyleSheet, ScrollView, View, Text, TouchableOpacity, Alert, Modal, Tex
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth';
-import { useSectionStudents, useSubjectEnrolledStudentIds, useStudents, useAssignStudentsToSection, useRemoveStudentFromSection } from '@/lib/queries';
+import { useSectionStudents, useSubjectEnrolledStudentIds, useStudents, useSection, useAssignStudentsToSection, useRemoveStudentFromSection } from '@/lib/queries';
 import { GlassCard, GlassButton, IconBadge } from '@/components/ui';
 import { useThemeColors, spacing, typography } from '@/theme';
 
@@ -24,23 +24,38 @@ export default function SectionStudentsListScreen() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const departmentId = user?.department_id ?? null;
+  const { data: section } = useSection(sectionId ?? null);
+  const canEditRoster = user?.role === 'DEPARTMENT_ADMIN';
+  const departmentId = user?.department_id ?? section?.department_id ?? null;
   const collegeId = user?.college_id ?? null;
 
   const { data: sectionStudents = [], refetch: refetchStudents } = useSectionStudents(sectionId);
   const { data: enrolledInSubjectIds = [] } = useSubjectEnrolledStudentIds(subjectId);
-  const { data: allStudents = [] } = useStudents(collegeId, departmentId, showAddStudents);
+  const {
+    data: allStudents = [],
+    isLoading: studentsLoading,
+    isError: studentsError,
+    refetch: refetchAllStudents,
+  } = useStudents(collegeId, departmentId, !!(collegeId || departmentId), false);
 
   const assignStudents = useAssignStudentsToSection();
   const removeStudent = useRemoveStudentFromSection();
 
-  const enrolledInSubjectSet = useMemo(() => new Set(enrolledInSubjectIds), [enrolledInSubjectIds]);
+  const enrolledInSubjectSet = useMemo(
+    () => new Set((enrolledInSubjectIds as string[]).map((id) => String(id))),
+    [enrolledInSubjectIds]
+  );
   const availableStudents = useMemo(() => {
-    // Only show students not in any section of this subject (one section per student per subject)
-    const students = (allStudents as Student[]).filter(s => !enrolledInSubjectSet.has(s.id));
+    const students = (allStudents as Array<Student & { enrollment_status?: string }>).filter(
+      (s) =>
+        (s.enrollment_status == null || s.enrollment_status === 'enrolled') &&
+        !enrolledInSubjectSet.has(String(s.id))
+    );
     if (!searchQuery.trim()) return students;
     const q = searchQuery.toLowerCase();
-    return students.filter(s => s.name?.toLowerCase().includes(q) || s.reg_no?.toLowerCase().includes(q));
+    return students.filter(
+      (s) => s.name?.toLowerCase().includes(q) || s.reg_no?.toLowerCase().includes(q)
+    );
   }, [allStudents, enrolledInSubjectSet, searchQuery]);
 
   const enterEditMode = () => setIsEditMode(true);
@@ -55,14 +70,21 @@ export default function SectionStudentsListScreen() {
   const handleAddStudents = async () => {
     if (!sectionId || selectedStudentIds.length === 0) return;
     try {
-      await assignStudents.mutateAsync({ sectionId, studentIds: selectedStudentIds });
+      await assignStudents.mutateAsync({
+        sectionId: String(sectionId),
+        studentIds: selectedStudentIds.map(String),
+      });
       setShowAddStudents(false);
-      refetchStudents();
+      setSelectedStudentIds([]);
+      await refetchStudents();
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
-      const message = typeof detail === 'object' && detail?.message
-        ? detail.message
-        : (typeof detail === 'string' ? detail : 'Failed to add students');
+      const message =
+        typeof detail === 'object' && detail?.message
+          ? detail.message
+          : typeof detail === 'string'
+            ? detail
+            : e?.message || 'Failed to add students';
       Alert.alert('Cannot add students', message);
     }
   };
@@ -87,7 +109,10 @@ export default function SectionStudentsListScreen() {
   };
 
   const toggleStudent = (studentId: string) => {
-    setSelectedStudentIds(prev => (prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]));
+    const id = String(studentId);
+    setSelectedStudentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   if (!sectionId) {
@@ -103,10 +128,12 @@ export default function SectionStudentsListScreen() {
   }
 
   return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={20} color={colors.primary} />
@@ -118,7 +145,7 @@ export default function SectionStudentsListScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>STUDENTS</Text>
-        {isEditMode ? (
+        {canEditRoster && isEditMode ? (
           <View style={styles.editModeActions}>
             <TouchableOpacity style={styles.editStudentsBtn} onPress={handleOpenAddStudents}>
               <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
@@ -128,12 +155,12 @@ export default function SectionStudentsListScreen() {
               <Text style={[styles.editStudentsText, { color: colors.primary }]}>Done</Text>
             </TouchableOpacity>
           </View>
-        ) : (
+        ) : canEditRoster ? (
           <TouchableOpacity style={styles.editStudentsBtn} onPress={enterEditMode}>
             <Ionicons name="create-outline" size={18} color={colors.primary} />
             <Text style={[styles.editStudentsText, { color: colors.primary }]}>Edit Students</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       <GlassCard style={styles.listCard} variant="solid">
@@ -168,6 +195,7 @@ export default function SectionStudentsListScreen() {
           </Text>
         )}
       </GlassCard>
+    </ScrollView>
 
       <Modal visible={showAddStudents} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -180,28 +208,47 @@ export default function SectionStudentsListScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <ScrollView style={styles.studentList}>
-              {availableStudents.map((student: Student) => (
-                <TouchableOpacity
-                  key={student.id}
-                  style={[styles.studentCheckItem, { borderBottomColor: colors.border }]}
-                  onPress={() => toggleStudent(student.id)}
-                >
-                  <Ionicons
-                    name={selectedStudentIds.includes(student.id) ? 'checkbox' : 'square-outline'}
-                    size={22}
-                    color={selectedStudentIds.includes(student.id) ? colors.primary : colors.textMuted}
-                  />
-                  <View style={styles.studentCheckInfo}>
-                    <Text style={[styles.studentName, { color: colors.textPrimary }]}>{student.name}</Text>
-                    <Text style={[styles.studentReg, { color: colors.textMuted }]}>{student.reg_no}</Text>
-                  </View>
+            <ScrollView style={styles.studentList} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+              {studentsLoading ? (
+                <Text style={[styles.emptyTextSmall, { color: colors.textMuted }]}>Loading students…</Text>
+              ) : studentsError ? (
+                <TouchableOpacity onPress={() => refetchAllStudents()}>
+                  <Text style={[styles.emptyTextSmall, { color: colors.error }]}>
+                    Could not load students. Tap to retry.
+                  </Text>
                 </TouchableOpacity>
-              ))}
-              {availableStudents.length === 0 && (
-                <Text style={[styles.emptyTextSmall, { color: colors.textMuted }]}>
-                  {searchQuery ? 'No match' : 'All students are already in a section of this subject'}
-                </Text>
+              ) : (
+                <>
+                  {availableStudents.map((student: Student) => {
+                    const selected = selectedStudentIds.includes(String(student.id));
+                    return (
+                    <TouchableOpacity
+                      key={String(student.id)}
+                      style={[styles.studentCheckItem, { borderBottomColor: colors.border }]}
+                      onPress={() => toggleStudent(String(student.id))}
+                    >
+                      <Ionicons
+                        name={selected ? 'checkbox' : 'square-outline'}
+                        size={22}
+                        color={selected ? colors.primary : colors.textMuted}
+                      />
+                      <View style={styles.studentCheckInfo}>
+                        <Text style={[styles.studentName, { color: colors.textPrimary }]}>{student.name}</Text>
+                        <Text style={[styles.studentReg, { color: colors.textMuted }]}>{student.reg_no}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    );
+                  })}
+                  {availableStudents.length === 0 && (
+                    <Text style={[styles.emptyTextSmall, { color: colors.textMuted }]}>
+                      {searchQuery
+                        ? 'No match'
+                        : (allStudents as Student[]).length === 0
+                          ? 'No students in this department yet. Enroll them first.'
+                          : 'All students in this department are already in a section of this subject'}
+                    </Text>
+                  )}
+                </>
               )}
             </ScrollView>
             <Text style={[styles.selectedCount, { color: colors.textSecondary }]}>
@@ -209,14 +256,20 @@ export default function SectionStudentsListScreen() {
             </Text>
             <View style={styles.modalActions}>
               <GlassButton variant="ghost" size="sm" onPress={() => setShowAddStudents(false)}>Cancel</GlassButton>
-              <GlassButton variant="primary" size="sm" onPress={handleAddStudents} disabled={selectedStudentIds.length === 0}>
+              <GlassButton
+                variant="primary"
+                size="sm"
+                onPress={handleAddStudents}
+                disabled={selectedStudentIds.length === 0 || assignStudents.isPending}
+                loading={assignStudents.isPending}
+              >
                 Add
               </GlassButton>
             </View>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 

@@ -1,6 +1,5 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,6 +8,10 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useAuthStore } from '@/store/auth';
 
 export { ErrorBoundary } from 'expo-router';
+
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,7 +30,7 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const { token, hasHydrated, hydrate } = useAuthStore();
+  const { hasHydrated, hydrate } = useAuthStore();
   useEffect(() => {
     hydrate();
   }, []);
@@ -37,15 +40,12 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && hasHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, hasHydrated]);
 
-  if (!loaded) return null;
-
-  // Wait for hydration before showing tabs - prevents jumping straight into app with stale token
-  const showTabs = hasHydrated && !!token;
+  if (!loaded || !hasHydrated) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -57,11 +57,9 @@ export default function RootLayout() {
             animationDuration: 200,
           }}
         >
-          {showTabs ? (
-            <Stack.Screen key="tabs" name="(tabs)" />
-          ) : (
-            <Stack.Screen key="auth" name="(auth)" />
-          )}
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>
