@@ -8,8 +8,11 @@
     "packages/*"
   ],
   "overrides": {
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-worklets": "0.10.1"
   },
   "scripts": {
     "build": "turbo run build",
@@ -17,7 +20,8 @@
     "build:mobile": "turbo run build --filter=mobile",
     "build:desktop": "turbo run build --filter=admin-desktop",
     "predev": "bash scripts/dev-preflight.sh",
-    "dev": "turbo run dev --filter=backend --filter=mobile --filter=admin-desktop --filter=@attend/shared",
+    "dev": "turbo run dev --filter=backend --filter=mobile --filter=admin-desktop --filter=student-web --filter=@attend/shared",
+    "student-web": "turbo run dev --filter=student-web",
     "mobile": "cd apps/mobile && EXPO_ROUTER_APP_ROOT=./app npx expo start",
     "desktop": "turbo run dev --filter=admin-desktop",
     "backend": "cd apps/backend && uvicorn app.main:app --reload --host 0.0.0.0",

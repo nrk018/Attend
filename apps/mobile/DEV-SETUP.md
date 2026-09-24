@@ -8,7 +8,7 @@
 npm run dev
 ```
 
-Backend must show `Uvicorn running on http://0.0.0.0:8000` in the Turbo logs. Scan the Expo QR code with Expo Go on your phone.
+Backend must show `Uvicorn running on http://0.0.0.0:8000` in the Turbo logs. Scan the Expo QR code with **Expo Go for SDK 57** (not the App Store copy, which stops at SDK 54). On Android, install it from [expo.dev/go](https://expo.dev/go). On iPhone, use `eas go` / [sign.expo.dev](https://sign.expo.dev) for SDK 57.
 
 **Or run mobile only** (if backend is already running):
 

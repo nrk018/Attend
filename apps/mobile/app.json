@@ -1,26 +1,25 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Attend",
+    "slug": "attend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "attend",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "club.builditmuj.attend",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
-        }
+        "NSCameraUsageDescription": "Attend uses the camera to enroll students and take attendance.",
+        "NSPhotoLibraryUsageDescription": "Attend may use photos for student enrollment.",
+        "NSLocalNetworkUsageDescription": "Attend uses the local network only during development."
       }
     },
     "android": {
+      "package": "club.builditmuj.attend",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,31 +30,39 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "root": "./app"
+        }
+      ],
       [
         "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera for face capture."
         }
       ],
+      "expo-build-properties",
+      "expo-font",
+      "expo-sharing",
       [
-        "expo-build-properties",
+        "expo-splash-screen",
         {
-          "android": {
-            "usesCleartextTraffic": true
-          }
+          "backgroundColor": "#ffffff",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "apiUrl": "http://10.73.3.164:8000"
     }
   }
 }
